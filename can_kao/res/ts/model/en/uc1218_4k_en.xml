@@ -1,0 +1,296 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!DOCTYPE TS>
+<TS version="2.1">
+<context>
+    <name>UC1218_4K_Audio_Form</name>
+    <message>
+        <source>Audio</source>
+        <translation>Audio</translation>
+    </message>
+    <message>
+        <source>HDMI</source>
+        <translation>HDMI</translation>
+    </message>
+    <message>
+        <source>PC</source>
+        <translation>PC</translation>
+    </message>
+    <message>
+        <source>Line IN</source>
+        <translation>Line IN</translation>
+    </message>
+    <message>
+        <source>Mic IN</source>
+        <translation>Mic IN</translation>
+    </message>
+    <message>
+        <source>HP OUT</source>
+        <translation>HP OUT</translation>
+    </message>
+    <message>
+        <source>Mixer</source>
+        <translation>Mixer</translation>
+    </message>
+    <message>
+        <source>UAC OUT</source>
+        <translation>UAC OUT</translation>
+    </message>
+    <message>
+        <source>Apply</source>
+        <translation>Apply</translation>
+    </message>
+    <message>
+        <source>Volume</source>
+        <translation>Volume</translation>
+    </message>
+    <message>
+        <source>USB Audio</source>
+        <translation>USB Audio</translation>
+    </message>
+    <message>
+        <source>Headphone</source>
+        <translation>Headphone</translation>
+    </message>
+</context>
+<context>
+    <name>UC1218_4K_Device_Infor_Form</name>
+    <message>
+        <source>Version</source>
+        <translation>Version</translation>
+    </message>
+    <message>
+        <source>Input Video</source>
+        <translation>Input Video</translation>
+    </message>
+    <message>
+        <source>UVC Name</source>
+        <translation>UVC Name</translation>
+    </message>
+    <message>
+        <source>UAC Name</source>
+        <translation>UAC Name</translation>
+    </message>
+    <message>
+        <source>Product Name</source>
+        <translation>Product Name</translation>
+    </message>
+    <message>
+        <source>Reset</source>
+        <translation>Reset</translation>
+    </message>
+    <message>
+        <source>Factory Reset</source>
+        <translation>Factory Reset</translation>
+    </message>
+    <message>
+        <source>Restore device to factory settings?</source>
+        <translation>Restore device to factory settings?</translation>
+    </message>
+</context>
+<context>
+    <name>UC1218_4K_Edid_Form</name>
+    <message>
+        <source>Mode</source>
+        <translation>Mode</translation>
+    </message>
+    <message>
+        <source>Content</source>
+        <translation>Content</translation>
+    </message>
+    <message>
+        <source>Auto</source>
+        <translation>Auto</translation>
+    </message>
+    <message>
+        <source>Pre-saved</source>
+        <translation>Pre-saved</translation>
+    </message>
+    <message>
+        <source>Bypass</source>
+        <translation>Bypass</translation>
+    </message>
+    <message>
+        <source>EDID Mode</source>
+        <translation>EDID Mode</translation>
+    </message>
+    <message>
+        <source>AUTO EDID</source>
+        <translation>AUTO EDID</translation>
+    </message>
+    <message>
+        <source>Pre-saved EDID</source>
+        <translation>Pre-saved EDID</translation>
+    </message>
+    <message>
+        <source>Bypass EDID</source>
+        <translation>Bypass EDID</translation>
+    </message>
+    <message>
+        <source>EDID Information</source>
+        <translation>EDID Information</translation>
+    </message>
+    <message>
+        <source>Export</source>
+        <translation>Export</translation>
+    </message>
+    <message>
+        <source>Import</source>
+        <translation>Import</translation>
+    </message>
+    <message>
+        <source>Delete</source>
+        <translation>Delete</translation>
+    </message>
+    <message>
+        <source>Apply</source>
+        <translation>Apply</translation>
+    </message>
+    <message>
+        <source>Default</source>
+        <translation>Default</translation>
+    </message>
+    <message>
+        <source>Yes</source>
+        <translation>Yes</translation>
+    </message>
+    <message>
+        <source>No</source>
+        <translation>No</translation>
+    </message>
+    <message>
+        <source>EDID Management</source>
+        <translation>EDID Management</translation>
+    </message>
+    <message>
+        <source>Open EDID File</source>
+        <translation>Open EDID File</translation>
+    </message>
+    <message>
+        <source>EDID Bin Files (*.bin);;EDID XML Files (*.xml);;All Files (*)</source>
+        <translation>EDID Bin Files (*.bin);;EDID XML Files (*.xml);;All Files (*)</translation>
+    </message>
+    <message>
+        <source>EDID import failed: EDID table is full.</source>
+        <translation>EDID import failed: EDID table is full.</translation>
+    </message>
+    <message>
+        <source>Failed to import EDID!</source>
+        <translation>Failed to import EDID!</translation>
+    </message>
+    <message>
+        <source>XML file will been support later.</source>
+        <translation>XML file will been support later.</translation>
+    </message>
+    <message>
+        <source>This file type is unsupported.</source>
+        <translation>This file type is unsupported.</translation>
+    </message>
+    <message>
+        <source>Save EDID File</source>
+        <translation>Save EDID File</translation>
+    </message>
+    <message>
+        <source>EDID Bin Files (*.bin);;All Files (*)</source>
+        <translation>EDID Bin Files (*.bin);;All Files (*)</translation>
+    </message>
+    <message>
+        <source>Export EDID Data</source>
+        <translation>Export EDID Data</translation>
+    </message>
+    <message>
+        <source>EDID exported successfully!</source>
+        <translation>EDID exported successfully!</translation>
+    </message>
+    <message>
+        <source>Rename</source>
+        <translation>Rename</translation>
+    </message>
+    <message>
+        <source>OK</source>
+        <translation>OK</translation>
+    </message>
+    <message>
+        <source>Importing EDID, please wait...</source>
+        <translation>Importing EDID, please wait...</translation>
+    </message>
+    <message>
+        <source>Deleting EDID, please wait...</source>
+        <translation>Deleting EDID, please wait...</translation>
+    </message>
+    <message>
+        <source>EDID is being enabled.</source>
+        <translation>EDID is being enabled.</translation>
+    </message>
+    <message>
+        <source>EDID imported successfully!</source>
+        <translation>EDID imported successfully!</translation>
+    </message>
+    <message>
+        <source>EDID deleted successfully!</source>
+        <translation>EDID deleted successfully!</translation>
+    </message>
+    <message>
+        <source>EDID enabled successfully.</source>
+        <translation>EDID enabled successfully.</translation>
+    </message>
+    <message>
+        <source>EDID import failed: Name already exists.</source>
+        <translation>EDID import failed: Name already exists.</translation>
+    </message>
+    <message>
+        <source>EDID import failed: Name exceeds 32 characters.</source>
+        <translation>EDID import failed: Name exceeds 32 characters.</translation>
+    </message>
+    <message>
+        <source>EDID import failed: Get table index error.</source>
+        <translation>EDID import failed: Get table index error.</translation>
+    </message>
+</context>
+<context>
+    <name>UC1218_4K_Video_Setting_Form</name>
+    <message>
+        <source>YUV2RGB</source>
+        <translation>YUV2RGB</translation>
+    </message>
+    <message>
+        <source>Color Range</source>
+        <translation>Color Range</translation>
+    </message>
+    <message>
+        <source>Limited Range</source>
+        <translation>Limited Range</translation>
+    </message>
+    <message>
+        <source>Full Range</source>
+        <translation>Full Range</translation>
+    </message>
+    <message>
+        <source>Bypass</source>
+        <translation>Bypass</translation>
+    </message>
+    <message>
+        <source>RGB2YUV</source>
+        <translation>RGB2YUV</translation>
+    </message>
+    <message>
+        <source>Video Control</source>
+        <translation>Video Control</translation>
+    </message>
+    <message>
+        <source>Brightness</source>
+        <translation>Brightness</translation>
+    </message>
+    <message>
+        <source>Contrast</source>
+        <translation>Contrast</translation>
+    </message>
+    <message>
+        <source>Saturation</source>
+        <translation>Saturation</translation>
+    </message>
+    <message>
+        <source>Hue</source>
+        <translation>Hue</translation>
+    </message>
+</context>
+</TS>

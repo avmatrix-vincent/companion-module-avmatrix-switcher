@@ -1,0 +1,43 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!DOCTYPE TS>
+<TS version="2.1">
+    <context>
+        <name>Form</name>
+        <message>
+            <source>Form</source>
+            <translation type="unfinished" />
+        </message>
+        <message>
+            <source>Audio</source>
+            <translation>音频</translation>
+        </message>
+        <message>
+            <source>Scaling</source>
+            <translation>比例</translation>
+        </message>
+        <message>
+            <source>Firmware Version</source>
+            <translation>固件版本</translation>
+        </message>
+        <message>
+            <source>Input Status</source>
+            <translation>输入状态</translation>
+        </message>
+        <message>
+            <source>Save</source>
+            <translation>保存</translation>
+        </message>
+        <message>
+            <source>Aspect Ratio</source>
+            <translation>接收比例</translation>
+        </message>
+        <message>
+            <source>Source</source>
+            <translation>源</translation>
+        </message>
+        <message>
+            <source>Custom</source>
+            <translation>定制</translation>
+        </message>
+    </context>
+</TS>

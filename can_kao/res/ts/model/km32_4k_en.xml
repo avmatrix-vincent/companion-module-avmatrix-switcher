@@ -1,0 +1,1139 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!DOCTYPE TS>
+<TS version="2.1">
+    <context>
+        <name>Form</name>
+        <message>
+            <location filename="../../src/ui/cue01/input_status_widget.ui" line="14" />
+            <source>Form</source>
+            <translation type="unfinished" />
+        </message>
+        <message>
+            <location filename="../../src/ui/cue01/input_status_widget.ui" line="54" />
+            <source>Foreground</source>
+            <translation type="unfinished" />
+        </message>
+        <message>
+            <location filename="../../src/ui/cue01/input_status_widget.ui" line="94" />
+            <location filename="../../src/ui/cue01/input_status_widget.ui" line="407" />
+            <location filename="../../src/ui/cue01/input_status_widget.ui" line="638" />
+            <source>Format   </source>
+            <translation type="unfinished" />
+        </message>
+        <message>
+            <location filename="../../src/ui/cue01/input_status_widget.ui" line="120" />
+            <location filename="../../src/ui/cue01/input_status_widget.ui" line="440" />
+            <location filename="../../src/ui/cue01/input_status_widget.ui" line="648" />
+            <source>Bit Depth   </source>
+            <translation type="unfinished" />
+        </message>
+        <message>
+            <location filename="../../src/ui/cue01/input_status_widget.ui" line="133" />
+            <location filename="../../src/ui/cue01/input_status_widget.ui" line="420" />
+            <location filename="../../src/ui/cue01/input_status_widget.ui" line="628" />
+            <source>Color Space   </source>
+            <translation type="unfinished" />
+        </message>
+        <message>
+            <location filename="../../src/ui/cue01/input_status_widget.ui" line="165" />
+            <location filename="../../src/ui/cue01/input_status_widget.ui" line="430" />
+            <location filename="../../src/ui/cue01/input_status_widget.ui" line="618" />
+            <source>Range   </source>
+            <translation type="unfinished" />
+        </message>
+        <message>
+            <location filename="../../src/ui/cue01/input_status_widget.ui" line="294" />
+            <source>Background</source>
+            <translation type="unfinished" />
+        </message>
+        <message>
+            <location filename="../../src/ui/cue01/input_status_widget.ui" line="534" />
+            <source>AUX</source>
+            <translation type="unfinished" />
+        </message>
+    </context>
+    <context>
+        <name>Form</name>
+        <message>
+            <location filename="../../src/ui/cue01/lumaKeyWidget.ui" line="62"/>
+            <source>Luma Status</source>
+            <translation type="unfinished"></translation>
+        </message>
+        <message>
+            <location filename="../../src/ui/cue01/lumaKeyWidget.ui" line="69"/>
+            <source>Inactive</source>
+            <translation type="unfinished"></translation>
+        </message>
+        <message>
+            <location filename="../../src/view/cue01/chromaKeyWidget.py" line="1061"/>
+            <location filename="../../src/view/cue01/chromaKeyWidget.py" line="1446"/>
+            <source>Active</source>
+            <translation type="unfinished"></translation>
+        </message>
+        <message>
+            <location filename="../../src/ui/cue01/lumaKeyWidget.ui" line="14" />
+            <source>Form</source>
+            <translation type="unfinished" />
+        </message>
+        <message>
+            <location filename="../../src/ui/cue01/lumaKeyWidget.ui" line="67" />
+            <source>Fill Source</source>
+            <translation type="unfinished" />
+        </message>
+        <message>
+            <location filename="../../src/ui/cue01/lumaKeyWidget.ui" line="84" />
+            <source>Tolerance Curve</source>
+            <translation type="unfinished" />
+        </message>
+        <message>
+            <location filename="../../src/ui/cue01/lumaKeyWidget.ui" line="107" />
+            <source>Tolerance Invert</source>
+            <translation type="unfinished" />
+        </message>
+        <message>
+            <location filename="../../src/ui/cue01/lumaKeyWidget.ui" line="121" />
+            <source>Tolerance</source>
+            <translation type="unfinished" />
+        </message>
+        <message>
+            <location filename="../../src/ui/cue01/lumaKeyWidget.ui" line="145" />
+            <source>Tolerance Unit Step</source>
+            <translation type="unfinished" />
+        </message>
+        <message>
+            <location filename="../../src/ui/cue01/lumaKeyWidget.ui" line="175" />
+            <source>Key Clip On/Off</source>
+            <translation type="unfinished" />
+        </message>
+        <message>
+            <location filename="../../src/ui/cue01/lumaKeyWidget.ui" line="198" />
+            <source>Key Clip Curve</source>
+            <translation type="unfinished" />
+        </message>
+        <message>
+            <location filename="../../src/ui/cue01/lumaKeyWidget.ui" line="212" />
+            <source>Key Clip</source>
+            <translation type="unfinished" />
+        </message>
+    </context>
+    <context>
+        <name>LumaKeyWidget</name>
+        <message>
+            <location filename="../../src/view/cue01/lumaKeyWidget.py" line="84"/>
+            <location filename="../../src/view/cue01/lumaKeyWidget.py" line="270"/>
+            <source>Active</source>
+            <translation type="unfinished"></translation>
+        </message>
+        <message>
+            <location filename="../../src/view/cue01/lumaKeyWidget.py" line="93"/>
+            <location filename="../../src/view/cue01/lumaKeyWidget.py" line="266"/>
+            <source>Inactive</source>
+            <translation type="unfinished"></translation>
+        </message>
+    </context>
+    <context>
+        <name>Form</name>
+        <message>
+            <location filename="../../src/ui/cue01/networkSettingWidget.ui" line="14" />
+            <source>Form</source>
+            <translation type="unfinished" />
+        </message>
+        <message>
+            <location filename="../../src/ui/cue01/networkSettingWidget.ui" line="82" />
+            <source>Subnet Mask</source>
+            <translation type="unfinished" />
+        </message>
+        <message>
+            <location filename="../../src/ui/cue01/networkSettingWidget.ui" line="92" />
+            <source>Gateway</source>
+            <translation type="unfinished" />
+        </message>
+        <message>
+            <location filename="../../src/ui/cue01/networkSettingWidget.ui" line="118" />
+            <source>Save</source>
+            <translation type="unfinished" />
+        </message>
+        <message>
+            <location filename="../../src/ui/cue01/networkSettingWidget.ui" line="125" />
+            <source>IP</source>
+            <translation type="unfinished" />
+        </message>
+        <message>
+            <location filename="../../src/ui/cue01/networkSettingWidget.ui" line="145" />
+            <source>DHCP ON/OFF</source>
+            <translation type="unfinished" />
+        </message>
+    </context>
+    <context>
+        <name>Form</name>
+        <message>
+            <location filename="../../src/ui/cue01/outputInterfaceWidget.ui" line="14" />
+            <source>Form</source>
+            <translation type="unfinished" />
+        </message>
+        <message>
+            <location filename="../../src/ui/cue01/outputInterfaceWidget.ui" line="50" />
+            <source>Output PVW</source>
+            <translation type="unfinished" />
+        </message>
+        <message>
+            <location filename="../../src/ui/cue01/outputInterfaceWidget.ui" line="77" />
+            <location filename="../../src/ui/cue01/outputInterfaceWidget.ui" line="204" />
+            <location filename="../../src/ui/cue01/outputInterfaceWidget.ui" line="331" />
+            <location filename="../../src/ui/cue01/outputInterfaceWidget.ui" line="458" />
+            <source>Format</source>
+            <translation type="unfinished" />
+        </message>
+        <message>
+            <location filename="../../src/ui/cue01/outputInterfaceWidget.ui" line="113" />
+            <location filename="../../src/ui/cue01/outputInterfaceWidget.ui" line="240" />
+            <location filename="../../src/ui/cue01/outputInterfaceWidget.ui" line="367" />
+            <location filename="../../src/ui/cue01/outputInterfaceWidget.ui" line="494" />
+            <source>Color Space</source>
+            <translation type="unfinished" />
+        </message>
+        <message>
+            <location filename="../../src/ui/cue01/outputInterfaceWidget.ui" line="149" />
+            <location filename="../../src/ui/cue01/outputInterfaceWidget.ui" line="276" />
+            <location filename="../../src/ui/cue01/outputInterfaceWidget.ui" line="403" />
+            <location filename="../../src/ui/cue01/outputInterfaceWidget.ui" line="530" />
+            <source>Range</source>
+            <translation type="unfinished" />
+        </message>
+        <message>
+            <location filename="../../src/ui/cue01/outputInterfaceWidget.ui" line="177" />
+            <source>Output PGM MATTE</source>
+            <translation type="unfinished" />
+        </message>
+        <message>
+            <location filename="../../src/ui/cue01/outputInterfaceWidget.ui" line="304" />
+            <source>Output PGM FULL</source>
+            <translation type="unfinished" />
+        </message>
+        <message>
+            <location filename="../../src/ui/cue01/outputInterfaceWidget.ui" line="431" />
+            <source>Output PGM</source>
+            <translation type="unfinished" />
+        </message>
+        <message>
+            <location filename="../../src/ui/cue01/outputInterfaceWidget.ui" line="571"/>
+            <source>Aux Output</source>
+            <translation type="unfinished"></translation>
+        </message>
+        <message>
+            <location filename="../../src/ui/cue01/outputInterfaceWidget.ui" line="581"/>
+            <source>Output Format</source>
+            <translation type="unfinished"></translation>
+        </message>
+    </context>
+    <context>
+        <name>Form</name>
+        <message>
+            <location filename="../../src/ui/cue01/referenceInputWidget.ui" line="14" />
+            <source>Form</source>
+            <translation type="unfinished" />
+        </message>
+        <message>
+            <location filename="../../src/ui/cue01/referenceInputWidget.ui" line="64" />
+            <source>Reference</source>
+            <translation type="unfinished" />
+        </message>
+        <message>
+            <location filename="../../src/ui/cue01/referenceInputWidget.ui" line="84" />
+            <source>Format</source>
+            <translation type="unfinished" />
+        </message>
+    </context>
+    <context>
+        <name>Form</name>
+        <message>
+            <location filename="../../src/ui/cue01/uskWidget.ui" line="14" />
+            <source>Form</source>
+            <translation type="unfinished" />
+        </message>
+        <message>
+            <location filename="../../src/ui/cue01/uskWidget.ui" line="50" />
+            <source>USK PIP</source>
+            <translation type="unfinished" />
+        </message>
+        <message>
+            <location filename="../../src/ui/cue01/uskWidget.ui" line="86" />
+            <location filename="../../src/ui/cue01/uskWidget.ui" line="307" />
+            <source>PIP ON/OFF</source>
+            <translation type="unfinished" />
+        </message>
+        <message>
+            <location filename="../../src/ui/cue01/uskWidget.ui" line="156" />
+            <source>Vertical</source>
+            <translation type="unfinished" />
+        </message>
+        <message>
+            <location filename="../../src/ui/cue01/uskWidget.ui" line="178" />
+            <source>Horizontal</source>
+            <translation type="unfinished" />
+        </message>
+        <message>
+            <location filename="../../src/ui/cue01/uskWidget.ui" line="225" />
+            <source>Width</source>
+            <translation type="unfinished" />
+        </message>
+        <message>
+            <location filename="../../src/ui/cue01/uskWidget.ui" line="247" />
+            <source>Height</source>
+            <translation type="unfinished" />
+        </message>
+        <message>
+            <location filename="../../src/ui/cue01/uskWidget.ui" line="271" />
+            <source>USK Mask</source>
+            <translation type="unfinished" />
+        </message>
+        <message>
+            <location filename="../../src/ui/cue01/uskWidget.ui" line="358" />
+            <source>Top</source>
+            <translation type="unfinished" />
+        </message>
+        <message>
+            <location filename="../../src/ui/cue01/uskWidget.ui" line="383" />
+            <source>Left</source>
+            <translation type="unfinished" />
+        </message>
+        <message>
+            <location filename="../../src/ui/cue01/uskWidget.ui" line="446" />
+            <source>Bottom</source>
+            <translation type="unfinished" />
+        </message>
+        <message>
+            <location filename="../../src/ui/cue01/uskWidget.ui" line="468" />
+            <source>Right</source>
+            <translation type="unfinished" />
+        </message>
+        <message>
+            <location filename="../../src/ui/cue01/uskWidget.ui" line="492" />
+            <source>USK Edge</source>
+            <translation type="unfinished" />
+        </message>
+        <message>
+            <location filename="../../src/ui/cue01/uskWidget.ui" line="572" />
+            <source>Stage 1</source>
+            <translation type="unfinished" />
+        </message>
+        <message>
+            <location filename="../../src/ui/cue01/uskWidget.ui" line="618" />
+            <location filename="../../src/ui/cue01/uskWidget.ui" line="847" />
+            <source>OFF</source>
+            <translation type="unfinished" />
+        </message>
+        <message>
+            <location filename="../../src/ui/cue01/uskWidget.ui" line="669" />
+            <location filename="../../src/ui/cue01/uskWidget.ui" line="901" />
+            <source>Erode 3x3</source>
+            <translation type="unfinished" />
+        </message>
+        <message>
+            <location filename="../../src/ui/cue01/uskWidget.ui" line="691" />
+            <location filename="../../src/ui/cue01/uskWidget.ui" line="939" />
+            <source>Gaussian 3x3</source>
+            <translation type="unfinished" />
+        </message>
+        <message>
+            <location filename="../../src/ui/cue01/uskWidget.ui" line="710" />
+            <location filename="../../src/ui/cue01/uskWidget.ui" line="958" />
+            <source>Erode 5x5</source>
+            <translation type="unfinished" />
+        </message>
+        <message>
+            <location filename="../../src/ui/cue01/uskWidget.ui" line="729" />
+            <location filename="../../src/ui/cue01/uskWidget.ui" line="977" />
+            <source>Dilate 5x5</source>
+            <translation type="unfinished" />
+        </message>
+        <message>
+            <location filename="../../src/ui/cue01/uskWidget.ui" line="748" />
+            <location filename="../../src/ui/cue01/uskWidget.ui" line="996" />
+            <source>Gaussian 5x5</source>
+            <translation type="unfinished" />
+        </message>
+        <message>
+            <location filename="../../src/ui/cue01/uskWidget.ui" line="767" />
+            <location filename="../../src/ui/cue01/uskWidget.ui" line="920" />
+            <source>Dilate 3x3</source>
+            <translation type="unfinished" />
+        </message>
+        <message>
+            <location filename="../../src/ui/cue01/uskWidget.ui" line="801" />
+            <source>Stage 2</source>
+            <translation type="unfinished" />
+        </message>
+    </context>
+    <context>
+        <name>Form</name>
+        <message>
+            <location filename="../../src/ui/cue01/color_selector_widget.ui" line="14" />
+            <source>Form</source>
+            <translation type="unfinished" />
+        </message>
+    </context>
+    <context>
+        <name>SystemSettingWidget</name>
+        <message>
+            <location filename="../../src/view/cue01/systemSettingWidget.py" line="32" />
+            <source>Language：</source>
+            <translation type="unfinished" />
+        </message>
+        <message>
+            <location filename="../../src/view/cue01/systemSettingWidget.py" line="43" />
+            <source>Fan Setting：</source>
+            <translation type="unfinished" />
+        </message>
+        <message>
+            <location filename="../../src/view/cue01/systemSettingWidget.py" line="54" />
+            <source>System Reset：</source>
+            <translation type="unfinished" />
+        </message>
+        <message>
+            <location filename="../../src/view/cue01/systemSettingWidget.py" line="60" />
+            <source>Reset</source>
+            <translation type="unfinished" />
+        </message>
+        <message>
+            <location filename="../../src/view/cue01/systemSettingWidget.py" line="67" />
+            <source>MCU Version：</source>
+            <translation type="unfinished" />
+        </message>
+        <message>
+            <location filename="../../src/view/cue01/systemSettingWidget.py" line="77" />
+            <source>System Version：</source>
+            <translation type="unfinished" />
+        </message>
+        <message>
+            <location filename="../../src/view/cue01/systemSettingWidget.py" line="87" />
+            <source>Keyboard Version：</source>
+            <translation type="unfinished" />
+        </message>
+        <message>
+            <location filename="../../src/view/cue01/systemSettingWidget.py" line="97" />
+            <source>Hardware Version：</source>
+            <translation type="unfinished" />
+        </message>
+    </context>
+    <context>
+        <name>ChromaKeyWidget</name>
+        <message>
+            <location filename="../../src/view/cue01/chromaKeyWidget.py" line="34" />
+            <source>Fill Source</source>
+            <translation type="unfinished" />
+        </message>
+        <message>
+            <location filename="../../src/view/cue01/chromaKeyWidget.py" line="52"/>
+            <source>Chroma Status</source>
+            <translation type="unfinished"></translation>
+        </message>
+        <message>
+            <location filename="../../src/view/cue01/chromaKeyWidget.py" line="55"/>
+            <location filename="../../src/view/cue01/chromaKeyWidget.py" line="1069"/>
+            <location filename="../../src/view/cue01/chromaKeyWidget.py" line="1442"/>
+            <source>Inactive</source>
+            <translation type="unfinished"></translation>
+        </message>
+        <message>
+            <location filename="../../src/view/cue01/chromaKeyWidget.py" line="59"/>
+            <source>Chroma Key Color</source>
+            <translation type="unfinished"></translation>
+        </message>
+        <message>
+            <location filename="../../src/view/cue01/chromaKeyWidget.py" line="46" />
+            <source>Video Source</source>
+            <translation type="unfinished" />
+        </message>
+        <message>
+            <location filename="../../src/view/cue01/chromaKeyWidget.py" line="69" />
+            <source>Chroma Fetch</source>
+            <translation type="unfinished" />
+        </message>
+        <message>
+            <location filename="../../src/view/cue01/chromaKeyWidget.py" line="79" />
+            <source>Fetch</source>
+            <translation type="unfinished" />
+        </message>
+        <message>
+            <location filename="../../src/view/cue01/chromaKeyWidget.py" line="85" />
+            <source>Fetch Manually</source>
+            <translation type="unfinished" />
+        </message>
+        <message>
+            <location filename="../../src/view/cue01/chromaKeyWidget.py" line="112" />
+            <source>Chroma Color Key</source>
+            <translation type="unfinished" />
+        </message>
+        <message>
+            <location filename="../../src/view/cue01/chromaKeyWidget.py" line="124" />
+            <location filename="../../src/view/cue01/chromaKeyWidget.py" line="721" />
+            <source>Red</source>
+            <translation type="unfinished" />
+        </message>
+        <message>
+            <location filename="../../src/view/cue01/chromaKeyWidget.py" line="144" />
+            <location filename="../../src/view/cue01/chromaKeyWidget.py" line="740" />
+            <source>Green</source>
+            <translation type="unfinished" />
+        </message>
+        <message>
+            <location filename="../../src/view/cue01/chromaKeyWidget.py" line="164" />
+            <location filename="../../src/view/cue01/chromaKeyWidget.py" line="759" />
+            <source>Blue</source>
+            <translation type="unfinished" />
+        </message>
+        <message>
+            <location filename="../../src/view/cue01/chromaKeyWidget.py" line="184" />
+            <source>Angle</source>
+            <translation type="unfinished" />
+        </message>
+        <message>
+            <location filename="../../src/view/cue01/chromaKeyWidget.py" line="204" />
+            <source>Tolerance</source>
+            <translation type="unfinished" />
+        </message>
+        <message>
+            <location filename="../../src/view/cue01/chromaKeyWidget.py" line="224" />
+            <source>Softness</source>
+            <translation type="unfinished" />
+        </message>
+        <message>
+            <location filename="../../src/view/cue01/chromaKeyWidget.py" line="281" />
+            <source>Chroma Key Setting</source>
+            <translation type="unfinished" />
+        </message>
+        <message>
+            <location filename="../../src/view/cue01/chromaKeyWidget.py" line="292" />
+            <source>Foreground</source>
+            <translation type="unfinished" />
+        </message>
+        <message>
+            <location filename="../../src/view/cue01/chromaKeyWidget.py" line="310" />
+            <location filename="../../src/view/cue01/chromaKeyWidget.py" line="494" />
+            <source>Background</source>
+            <translation type="unfinished" />
+        </message>
+        <message>
+            <location filename="../../src/view/cue01/chromaKeyWidget.py" line="328" />
+            <source>Key Edge</source>
+            <translation type="unfinished" />
+        </message>
+        <message>
+            <location filename="../../src/view/cue01/chromaKeyWidget.py" line="369" />
+            <source>Chroma Key Clip</source>
+            <translation type="unfinished" />
+        </message>
+        <message>
+            <location filename="../../src/view/cue01/chromaKeyWidget.py" line="380" />
+            <source>Clip On/Off</source>
+            <translation type="unfinished" />
+        </message>
+        <message>
+            <location filename="../../src/view/cue01/chromaKeyWidget.py" line="389" />
+            <source>Curve On/Off</source>
+            <translation type="unfinished" />
+        </message>
+        <message>
+            <location filename="../../src/view/cue01/chromaKeyWidget.py" line="398" />
+            <source>Key Clip</source>
+            <translation type="unfinished" />
+        </message>
+        <message>
+            <location filename="../../src/view/cue01/chromaKeyWidget.py" line="456" />
+            <source>Chroma Spill Correction</source>
+            <translation type="unfinished" />
+        </message>
+        <message>
+            <location filename="../../src/view/cue01/chromaKeyWidget.py" line="467" />
+            <source>Spill On/Off</source>
+            <translation type="unfinished" />
+        </message>
+        <message>
+            <location filename="../../src/view/cue01/chromaKeyWidget.py" line="476" />
+            <source>Spill Edge</source>
+            <translation type="unfinished" />
+        </message>
+        <message>
+            <location filename="../../src/view/cue01/chromaKeyWidget.py" line="546" />
+            <source>Chroma Spill Correction2</source>
+            <translation type="unfinished" />
+        </message>
+        <message>
+            <location filename="../../src/view/cue01/chromaKeyWidget.py" line="556" />
+            <source>Spill2 On/Off</source>
+            <translation type="unfinished" />
+        </message>
+        <message>
+            <location filename="../../src/view/cue01/chromaKeyWidget.py" line="565" />
+            <source>Spill2 Color</source>
+            <translation type="unfinished" />
+        </message>
+        <message>
+            <location filename="../../src/view/cue01/chromaKeyWidget.py" line="601" />
+            <source>Spill2 Reset</source>
+            <translation type="unfinished" />
+        </message>
+        <message>
+            <location filename="../../src/view/cue01/chromaKeyWidget.py" line="608" />
+            <location filename="../../src/view/cue01/chromaKeyWidget.py" line="777" />
+            <location filename="../../src/view/cue01/chromaKeyWidget.py" line="784" />
+            <source>Reset</source>
+            <translation type="unfinished" />
+        </message>
+        <message>
+            <location filename="../../src/view/cue01/chromaKeyWidget.py" line="652" />
+            <source>Chroma Color Adjustment</source>
+            <translation type="unfinished" />
+        </message>
+        <message>
+            <location filename="../../src/view/cue01/chromaKeyWidget.py" line="664" />
+            <source>Brightness</source>
+            <translation type="unfinished" />
+        </message>
+        <message>
+            <location filename="../../src/view/cue01/chromaKeyWidget.py" line="683" />
+            <source>Contract</source>
+            <translation type="unfinished" />
+        </message>
+        <message>
+            <location filename="../../src/view/cue01/chromaKeyWidget.py" line="702" />
+            <source>Saturation</source>
+            <translation type="unfinished" />
+        </message>
+    </context>
+    <context>
+        <name>ColorGenerationWidget</name>
+        <message>
+            <location filename="../../src/view/cue01/colorGenerationWidget.py" line="70" />
+            <source>Color1</source>
+            <translation type="unfinished" />
+        </message>
+        <message>
+            <location filename="../../src/view/cue01/colorGenerationWidget.py" line="71" />
+            <source>Color2</source>
+            <translation type="unfinished" />
+        </message>
+    </context>
+    <context>
+        <name>Form</name>
+        <message>
+            <location filename="../../src/ui/cue01/dskWidget.ui" line="14" />
+            <source>Form</source>
+            <translation type="unfinished" />
+        </message>
+        <message>
+            <location filename="../../src/ui/cue01/dskWidget.ui" line="36" />
+            <source>Fill Source</source>
+            <translation type="unfinished" />
+        </message>
+        <message>
+            <location filename="../../src/ui/cue01/dskWidget.ui" line="78" />
+            <source>Video Source</source>
+            <translation type="unfinished" />
+        </message>
+        <message>
+            <location filename="../../src/ui/cue01/dskWidget.ui" line="131" />
+            <source>DSK Tolerance</source>
+            <translation type="unfinished" />
+        </message>
+        <message>
+            <location filename="../../src/ui/cue01/dskWidget.ui" line="182" />
+            <source>Invert</source>
+            <translation type="unfinished" />
+        </message>
+        <message>
+            <location filename="../../src/ui/cue01/dskWidget.ui" line="253" />
+            <source>Tolerance</source>
+            <translation type="unfinished" />
+        </message>
+        <message>
+            <location filename="../../src/ui/cue01/dskWidget.ui" line="336" />
+            <source>Unit Step</source>
+            <translation type="unfinished" />
+        </message>
+        <message>
+            <location filename="../../src/ui/cue01/dskWidget.ui" line="406" />
+            <source>DSK Clip</source>
+            <translation type="unfinished" />
+        </message>
+        <message>
+            <location filename="../../src/ui/cue01/dskWidget.ui" line="454" />
+            <source>Clip ON/OFF</source>
+            <translation type="unfinished" />
+        </message>
+        <message>
+            <location filename="../../src/ui/cue01/dskWidget.ui" line="505" />
+            <source>Curve ON/OFF</source>
+            <translation type="unfinished" />
+        </message>
+        <message>
+            <location filename="../../src/ui/cue01/dskWidget.ui" line="569" />
+            <source>Clip</source>
+            <translation type="unfinished" />
+        </message>
+        <message>
+            <location filename="../../src/ui/cue01/dskWidget.ui" line="649" />
+            <source>PGM Level</source>
+            <translation type="unfinished" />
+        </message>
+        <message>
+            <location filename="../../src/ui/cue01/dskWidget.ui" line="687" />
+            <source>PVW Level</source>
+            <translation type="unfinished" />
+        </message>
+        <message>
+            <location filename="../../src/ui/cue01/dskWidget.ui" line="731" />
+            <source>DSK PIP</source>
+            <translation type="unfinished" />
+        </message>
+        <message>
+            <location filename="../../src/ui/cue01/dskWidget.ui" line="779" />
+            <source>PIP ON/OFF</source>
+            <translation type="unfinished" />
+        </message>
+        <message>
+            <location filename="../../src/ui/cue01/dskWidget.ui" line="830" />
+            <source>Horizontal</source>
+            <translation type="unfinished" />
+        </message>
+        <message>
+            <location filename="../../src/ui/cue01/dskWidget.ui" line="868" />
+            <source>Vertical</source>
+            <translation type="unfinished" />
+        </message>
+        <message>
+            <location filename="../../src/ui/cue01/dskWidget.ui" line="906" />
+            <source>Width</source>
+            <translation type="unfinished" />
+        </message>
+        <message>
+            <location filename="../../src/ui/cue01/dskWidget.ui" line="944" />
+            <source>Height</source>
+            <translation type="unfinished" />
+        </message>
+        <message>
+            <location filename="../../src/ui/cue01/dskWidget.ui" line="983" />
+            <source>DSK Mask</source>
+            <translation type="unfinished" />
+        </message>
+        <message>
+            <location filename="../../src/ui/cue01/dskWidget.ui" line="1031" />
+            <source>Mask ON/OFF</source>
+            <translation type="unfinished" />
+        </message>
+        <message>
+            <location filename="../../src/ui/cue01/dskWidget.ui" line="1082" />
+            <source>Top</source>
+            <translation type="unfinished" />
+        </message>
+        <message>
+            <location filename="../../src/ui/cue01/dskWidget.ui" line="1120" />
+            <source>Bottom</source>
+            <translation type="unfinished" />
+        </message>
+        <message>
+            <location filename="../../src/ui/cue01/dskWidget.ui" line="1158" />
+            <source>Left</source>
+            <translation type="unfinished" />
+        </message>
+        <message>
+            <location filename="../../src/ui/cue01/dskWidget.ui" line="1196" />
+            <source>Right</source>
+            <translation type="unfinished" />
+        </message>
+    </context>
+    <context>
+        <name>Form</name>
+        <message>
+            <location filename="../../src/ui/cue01/inputEnhancementWidget.ui" line="14" />
+            <source>Form</source>
+            <translation type="unfinished" />
+        </message>
+        <message>
+            <location filename="../../src/ui/cue01/inputEnhancementWidget.ui" line="59" />
+            <source>Foreground</source>
+            <translation type="unfinished" />
+        </message>
+        <message>
+            <location filename="../../src/ui/cue01/inputEnhancementWidget.ui" line="93" />
+            <location filename="../../src/ui/cue01/inputEnhancementWidget.ui" line="522" />
+            <location filename="../../src/ui/cue01/inputEnhancementWidget.ui" line="981" />
+            <source>Brightness</source>
+            <translation type="unfinished" />
+        </message>
+        <message>
+            <location filename="../../src/ui/cue01/inputEnhancementWidget.ui" line="103" />
+            <location filename="../../src/ui/cue01/inputEnhancementWidget.ui" line="542" />
+            <location filename="../../src/ui/cue01/inputEnhancementWidget.ui" line="951" />
+            <source>Contrast</source>
+            <translation type="unfinished" />
+        </message>
+        <message>
+            <location filename="../../src/ui/cue01/inputEnhancementWidget.ui" line="113" />
+            <location filename="../../src/ui/cue01/inputEnhancementWidget.ui" line="532" />
+            <location filename="../../src/ui/cue01/inputEnhancementWidget.ui" line="971" />
+            <source>Saturation</source>
+            <translation type="unfinished" />
+        </message>
+        <message>
+            <location filename="../../src/ui/cue01/inputEnhancementWidget.ui" line="123" />
+            <location filename="../../src/ui/cue01/inputEnhancementWidget.ui" line="552" />
+            <location filename="../../src/ui/cue01/inputEnhancementWidget.ui" line="961" />
+            <source>Hue</source>
+            <translation type="unfinished" />
+        </message>
+        <message>
+            <location filename="../../src/ui/cue01/inputEnhancementWidget.ui" line="168" />
+            <location filename="../../src/ui/cue01/inputEnhancementWidget.ui" line="597" />
+            <location filename="../../src/ui/cue01/inputEnhancementWidget.ui" line="1026" />
+            <source>LTI</source>
+            <translation type="unfinished" />
+        </message>
+        <message>
+            <location filename="../../src/ui/cue01/inputEnhancementWidget.ui" line="197" />
+            <location filename="../../src/ui/cue01/inputEnhancementWidget.ui" line="626" />
+            <location filename="../../src/ui/cue01/inputEnhancementWidget.ui" line="1055" />
+            <source>CTI</source>
+            <translation type="unfinished" />
+        </message>
+        <message>
+            <location filename="../../src/ui/cue01/inputEnhancementWidget.ui" line="227" />
+            <location filename="../../src/ui/cue01/inputEnhancementWidget.ui" line="656" />
+            <location filename="../../src/ui/cue01/inputEnhancementWidget.ui" line="1085" />
+            <source>Color Tone</source>
+            <translation type="unfinished" />
+        </message>
+        <message>
+            <location filename="../../src/ui/cue01/inputEnhancementWidget.ui" line="336" />
+            <location filename="../../src/ui/cue01/inputEnhancementWidget.ui" line="437" />
+            <location filename="../../src/ui/cue01/inputEnhancementWidget.ui" line="765" />
+            <location filename="../../src/ui/cue01/inputEnhancementWidget.ui" line="863" />
+            <location filename="../../src/ui/cue01/inputEnhancementWidget.ui" line="1214" />
+            <location filename="../../src/ui/cue01/inputEnhancementWidget.ui" line="1282" />
+            <source>Horizontal</source>
+            <translation type="unfinished" />
+        </message>
+        <message>
+            <location filename="../../src/ui/cue01/inputEnhancementWidget.ui" line="346" />
+            <location filename="../../src/ui/cue01/inputEnhancementWidget.ui" line="798" />
+            <location filename="../../src/ui/cue01/inputEnhancementWidget.ui" line="1194" />
+            <source>Anti Alias</source>
+            <translation type="unfinished" />
+        </message>
+        <message>
+            <location filename="../../src/ui/cue01/inputEnhancementWidget.ui" line="356" />
+            <location filename="../../src/ui/cue01/inputEnhancementWidget.ui" line="447" />
+            <location filename="../../src/ui/cue01/inputEnhancementWidget.ui" line="775" />
+            <location filename="../../src/ui/cue01/inputEnhancementWidget.ui" line="853" />
+            <location filename="../../src/ui/cue01/inputEnhancementWidget.ui" line="1204" />
+            <location filename="../../src/ui/cue01/inputEnhancementWidget.ui" line="1272" />
+            <source>Vertical</source>
+            <translation type="unfinished" />
+        </message>
+        <message>
+            <location filename="../../src/ui/cue01/inputEnhancementWidget.ui" line="427" />
+            <location filename="../../src/ui/cue01/inputEnhancementWidget.ui" line="843" />
+            <location filename="../../src/ui/cue01/inputEnhancementWidget.ui" line="1292" />
+            <source>Peak Filter</source>
+            <translation type="unfinished" />
+        </message>
+        <message>
+            <location filename="../../src/ui/cue01/inputEnhancementWidget.ui" line="488" />
+            <source>Background</source>
+            <translation type="unfinished" />
+        </message>
+        <message>
+            <location filename="../../src/ui/cue01/inputEnhancementWidget.ui" line="917" />
+            <source>AUX</source>
+            <translation type="unfinished" />
+        </message>
+    </context>
+    <context>
+        <name>Form</name>
+        <message>
+            <location filename="../../src/ui/cue01/inputNoiseReductionWidget.ui" line="14" />
+            <source>Form</source>
+            <translation type="unfinished" />
+        </message>
+        <message>
+            <location filename="../../src/ui/cue01/inputNoiseReductionWidget.ui" line="50" />
+            <source>Foreground NR</source>
+            <translation type="unfinished" />
+        </message>
+        <message>
+            <location filename="../../src/ui/cue01/inputNoiseReductionWidget.ui" line="77" />
+            <location filename="../../src/ui/cue01/inputNoiseReductionWidget.ui" line="151" />
+            <location filename="../../src/ui/cue01/inputNoiseReductionWidget.ui" line="225" />
+            <source>NR Mode</source>
+            <translation type="unfinished" />
+        </message>
+        <message>
+            <location filename="../../src/ui/cue01/inputNoiseReductionWidget.ui" line="103" />
+            <location filename="../../src/ui/cue01/inputNoiseReductionWidget.ui" line="177" />
+            <location filename="../../src/ui/cue01/inputNoiseReductionWidget.ui" line="251" />
+            <source>NR Motion Display On</source>
+            <translation type="unfinished" />
+        </message>
+        <message>
+            <location filename="../../src/ui/cue01/inputNoiseReductionWidget.ui" line="124" />
+            <source>Background NR</source>
+            <translation type="unfinished" />
+        </message>
+        <message>
+            <location filename="../../src/ui/cue01/inputNoiseReductionWidget.ui" line="198" />
+            <source>AUX NR</source>
+            <translation type="unfinished" />
+        </message>
+        <message>
+            <location filename="../../src/ui/cue01/inputNoiseReductionWidget.ui" line="272" />
+            <source>BNR</source>
+            <translation type="unfinished" />
+        </message>
+        <message>
+            <location filename="../../src/ui/cue01/inputNoiseReductionWidget.ui" line="305" />
+            <source>BNR Mode</source>
+            <translation type="unfinished" />
+        </message>
+        <message>
+            <location filename="../../src/ui/cue01/inputNoiseReductionWidget.ui" line="343" />
+            <source>BNR Intensity</source>
+            <translation type="unfinished" />
+        </message>
+        <message>
+            <location filename="../../src/ui/cue01/inputNoiseReductionWidget.ui" line="370" />
+            <source>Block Coordinate</source>
+            <translation type="unfinished" />
+        </message>
+        <message>
+            <location filename="../../src/ui/cue01/inputNoiseReductionWidget.ui" line="390" />
+            <source>X(0-7)</source>
+            <translation type="unfinished" />
+        </message>
+        <message>
+            <location filename="../../src/ui/cue01/inputNoiseReductionWidget.ui" line="413" />
+            <source>Y(0-7)</source>
+            <translation type="unfinished" />
+        </message>
+        <message>
+            <location filename="../../src/ui/cue01/inputNoiseReductionWidget.ui" line="427" />
+            <source>Block Display</source>
+            <translation type="unfinished" />
+        </message>
+        <message>
+            <location filename="../../src/ui/cue01/inputNoiseReductionWidget.ui" line="469" />
+            <source>Block Threshold</source>
+            <translation type="unfinished" />
+        </message>
+    </context>
+    <context>
+        <name>Form</name>
+        <message>
+            <location filename="../../src/ui/cue01/userSetting.ui" line="14"/>
+            <source>Form</source>
+            <translation type="unfinished"></translation>
+        </message>
+        <message>
+            <location filename="../../src/ui/cue01/userSetting.ui" line="76"/>
+            <source>Current User:</source>
+            <translation type="unfinished"></translation>
+        </message>
+        <message>
+            <location filename="../../src/ui/cue01/userSetting.ui" line="115"/>
+            <source>User List:</source>
+            <translation type="unfinished"></translation>
+        </message>
+        <message>
+            <location filename="../../src/ui/cue01/userSetting.ui" line="146"/>
+            <source>Switch</source>
+            <translation type="unfinished"></translation>
+        </message>
+        <message>
+            <location filename="../../src/ui/cue01/userSetting.ui" line="172"/>
+            <source>Conf Operation:</source>
+            <translation type="unfinished"></translation>
+        </message>
+        <message>
+            <location filename="../../src/ui/cue01/userSetting.ui" line="200"/>
+            <source>Import Configuration</source>
+            <translation type="unfinished"></translation>
+        </message>
+        <message>
+            <location filename="../../src/ui/cue01/userSetting.ui" line="225"/>
+            <source>Export Configuration</source>
+            <translation type="unfinished"></translation>
+        </message>
+        <message>
+            <location filename="../../src/ui/cue01/userSetting.ui" line="251"/>
+            <source>User Operatioin:</source>
+            <translation type="unfinished"></translation>
+        </message>
+        <message>
+            <location filename="../../src/ui/cue01/userSetting.ui" line="279"/>
+            <source>Delete Current User</source>
+            <translation type="unfinished"></translation>
+        </message>
+        <message>
+            <location filename="../../src/ui/cue01/userSetting.ui" line="304"/>
+            <source>Create New User</source>
+            <translation type="unfinished"></translation>
+        </message>
+    </context>
+    <context>
+        <name>UserSettingWidget</name>
+        <message>
+            <location filename="../../src/view/cue01/userSettingWidget.py" line="68"/>
+            <source>tip</source>
+            <translation type="unfinished"></translation>
+        </message>
+        <message>
+            <location filename="../../src/view/cue01/userSettingWidget.py" line="68"/>
+            <source>Swithing user will reboot the device, continue?</source>
+            <translation type="unfinished"></translation>
+        </message>
+        <message>
+            <location filename="../../src/view/cue01/userSettingWidget.py" line="84"/>
+            <source>choose config file(.config)</source>
+            <translation type="unfinished"></translation>
+        </message>
+        <message>
+            <location filename="../../src/view/cue01/userSettingWidget.py" line="105"/>
+            <source>choose export directory</source>
+            <translation type="unfinished"></translation>
+        </message>
+        <message>
+            <location filename="../../src/view/cue01/userSettingWidget.py" line="96"/>
+            <location filename="../../src/view/cue01/userSettingWidget.py" line="129"/>
+            <location filename="../../src/view/cue01/userSettingWidget.py" line="145"/>
+            <location filename="../../src/view/cue01/userSettingWidget.py" line="157"/>
+            <location filename="../../src/view/cue01/userSettingWidget.py" line="222"/>
+            <source>Warning</source>
+            <translation type="unfinished"></translation>
+        </message>
+        <message>
+            <location filename="../../src/view/cue01/userSettingWidget.py" line="96"/>
+            <source>The configuration file is empty!</source>
+            <translation type="unfinished"></translation>
+        </message>
+        <message>
+            <location filename="../../src/view/cue01/userSettingWidget.py" line="122"/>
+            <location filename="../../src/view/cue01/userSettingWidget.py" line="138"/>
+            <source>Export of user configuration failed! Please check if the device is connected.</source>
+            <translation type="unfinished"></translation>
+        </message>
+        <message>
+            <location filename="../../src/view/cue01/userSettingWidget.py" line="142"/>
+            <location filename="../../src/view/cue01/userSettingWidget.py" line="220"/>
+            <source>Info</source>
+            <translation type="unfinished"></translation>
+        </message>
+        <message>
+            <location filename="../../src/view/cue01/userSettingWidget.py" line="135"/>
+            <source>Export of user configuration successufully!</source>
+            <translation type="unfinished"></translation>
+        </message>
+        <message>
+            <location filename="../../src/view/cue01/userSettingWidget.py" line="150"/>
+            <source>The number of users has reached the limit! Please delete one user and try again.</source>
+            <translation type="unfinished"></translation>
+        </message>
+        <message>
+            <location filename="../../src/view/cue01/userSettingWidget.py" line="168"/>
+            <source>Please ensure that the configuration file has been saved,
+Otherwise, the {}’s configuration will not be retrievable!
+The Device will reboot, Continue?</source>
+            <translation type="unfinished"></translation>
+        </message>
+        <message>
+            <location filename="../../src/view/cue01/userSettingWidget.py" line="169"/>
+            <source>warning</source>
+            <translation type="unfinished"></translation>
+        </message>
+        <message>
+            <location filename="../../src/view/cue01/userSettingWidget.py" line="176"/>
+            <source>warning</source>
+            <translation type="unfinished"></translation>
+        </message>
+        <message>
+            <location filename="../../src/view/cue01/userSettingWidget.py" line="220"/>
+            <source>Import of user configuration successufully!</source>
+            <translation type="unfinished"></translation>
+        </message>
+        <message>
+            <location filename="../../src/view/cue01/userSettingWidget.py" line="222"/>
+            <source>Import of user configuration failed! Please check if the device is connected.</source>
+            <translation type="unfinished"></translation>
+        </message>
+    </context>
+    <context>
+        <name>Form</name>
+        <message>
+            <location filename="../../src/ui/cue01/audioWidget.ui" line="14"/>
+            <source>Form</source>
+            <translation type="unfinished"></translation>
+        </message>
+        <message>
+            <location filename="../../src/ui/cue01/audioWidget.ui" line="56"/>
+            <source>PGM</source>
+            <translation type="unfinished"></translation>
+        </message>
+        <message>
+            <location filename="../../src/ui/cue01/audioWidget.ui" line="66"/>
+            <source>Volume</source>
+            <translation type="unfinished"></translation>
+        </message>
+        <message>
+            <location filename="../../src/ui/cue01/audioWidget.ui" line="97"/>
+            <source>Mute</source>
+            <translation type="unfinished"></translation>
+        </message>
+        <message>
+            <location filename="../../src/ui/cue01/audioWidget.ui" line="107"/>
+            <source>HDMI In</source>
+            <translation type="unfinished"></translation>
+        </message>
+        <message>
+            <location filename="../../src/ui/cue01/audioWidget.ui" line="114"/>
+            <source>Line-In</source>
+            <translation type="unfinished"></translation>
+        </message>
+    </context>
+    <context>
+        <name>Form</name>
+        <message>
+            <location filename="../../src/ui/cue01/sourceWidget.ui" line="14"/>
+            <source>Form</source>
+            <translation type="unfinished"></translation>
+        </message>
+        <message>
+            <location filename="../../src/ui/cue01/sourceWidget.ui" line="56"/>
+            <source>AUX Source</source>
+            <translation type="unfinished"></translation>
+        </message>
+        <message>
+            <location filename="../../src/ui/cue01/sourceWidget.ui" line="87"/>
+            <source>USK Matte</source>
+            <translation type="unfinished"></translation>
+        </message>
+        <message>
+            <location filename="../../src/ui/cue01/sourceWidget.ui" line="97"/>
+            <source>DSK Matte</source>
+            <translation type="unfinished"></translation>
+        </message>
+        <message>
+            <location filename="../../src/ui/cue01/sourceWidget.ui" line="107"/>
+            <source>BG Source</source>
+            <translation type="unfinished"></translation>
+        </message>
+        <message>
+            <location filename="../../src/ui/cue01/sourceWidget.ui" line="117"/>
+            <source>Matte Source</source>
+            <translation type="unfinished"></translation>
+        </message>
+        <message>
+            <location filename="../../src/ui/cue01/sourceWidget.ui" line="133"/>
+            <source>Output Format</source>
+            <translation type="unfinished"></translation>
+        </message>
+    </context>
+</TS>

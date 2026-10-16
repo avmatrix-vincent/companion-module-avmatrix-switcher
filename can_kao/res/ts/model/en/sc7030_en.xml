@@ -1,0 +1,99 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!DOCTYPE TS>
+<TS version="2.1">
+    <context>
+        <name>SC7030_Setting_Form</name>
+        <message>
+            <source>Form</source>
+            <translation type="unfinished" />
+        </message>
+        <message>
+            <source>Manufacturer:</source>
+            <translation type="unfinished" />
+        </message>
+        <message>
+            <source>SN:</source>
+            <translation type="unfinished" />
+        </message>
+        <message>
+            <source>MCU Mode:</source>
+            <translation type="unfinished" />
+        </message>
+        <message>
+            <source>Protocol Version:</source>
+            <translation type="unfinished" />
+        </message>
+        <message>
+            <source>Boot Version:</source>
+            <translation type="unfinished" />
+        </message>
+        <message>
+            <source>APP Version:</source>
+            <translation type="unfinished" />
+        </message>
+        <message>
+            <source>FPGA Version:</source>
+            <translation type="unfinished" />
+        </message>
+        <message>
+            <source>Hardware Version:</source>
+            <translation type="unfinished" />
+        </message>
+        <message>
+            <source>SDI/HDMI Output:</source>
+            <translation type="unfinished" />
+        </message>
+        <message>
+            <source>Video Input:</source>
+            <translation type="unfinished" />
+        </message>
+        <message>
+            <source>Audio Input:</source>
+            <translation type="unfinished" />
+        </message>
+        <message>
+            <source>Follow Input</source>
+            <translation type="unfinished" />
+        </message>
+        <message>
+            <source>Analog Audio</source>
+            <translation type="unfinished" />
+        </message>
+        <message>
+            <source>Aspect Ratio:</source>
+            <translation type="unfinished" />
+        </message>
+        <message>
+            <source>16 : 9</source>
+            <translation type="unfinished" />
+        </message>
+        <message>
+            <source>4 : 3</source>
+            <translation type="unfinished" />
+        </message>
+        <message>
+            <source>Color Range:</source>
+            <translation type="unfinished" />
+        </message>
+        <message>
+            <source>Full Range</source>
+            <translation type="unfinished" />
+        </message>
+        <message>
+            <source>Limited Range</source>
+            <translation type="unfinished" />
+        </message>
+        <message>
+            <source>SDI Output:</source>
+            <translation type="unfinished" />
+        </message>
+        <message>
+            <source>3G Level-A</source>
+            <translation type="unfinished" />
+        </message>
+        <message>
+            <source>3G Level-B</source>
+            <translation type="unfinished" />
+        </message>
+    </context>
+</TS>

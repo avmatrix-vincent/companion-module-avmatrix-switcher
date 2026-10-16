@@ -1,0 +1,296 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!DOCTYPE TS>
+<TS version="2.1">
+<context>
+    <name>UC1218_4K_Audio_Form</name>
+    <message>
+        <source>Audio</source>
+        <translation>音频</translation>
+    </message>
+    <message>
+        <source>HDMI</source>
+        <translation>HDMI</translation>
+    </message>
+    <message>
+        <source>PC</source>
+        <translation>PC</translation>
+    </message>
+    <message>
+        <source>Line IN</source>
+        <translation>有线输入</translation>
+    </message>
+    <message>
+        <source>Mic IN</source>
+        <translation>麦克风</translation>
+    </message>
+    <message>
+        <source>HP OUT</source>
+        <translation>耳机输出</translation>
+    </message>
+    <message>
+        <source>Mixer</source>
+        <translation>混音</translation>
+    </message>
+    <message>
+        <source>UAC OUT</source>
+        <translation>UAC输出</translation>
+    </message>
+    <message>
+        <source>Apply</source>
+        <translation>应用</translation>
+    </message>
+    <message>
+        <source>Volume</source>
+        <translation>音量</translation>
+    </message>
+    <message>
+        <source>USB Audio</source>
+        <translation>USB音频</translation>
+    </message>
+    <message>
+        <source>Headphone</source>
+        <translation>耳机</translation>
+    </message>
+</context>
+<context>
+    <name>UC1218_4K_Device_Infor_Form</name>
+    <message>
+        <source>Version</source>
+        <translation>版本</translation>
+    </message>
+    <message>
+        <source>Input Video</source>
+        <translation>输入视频</translation>
+    </message>
+    <message>
+        <source>UVC Name</source>
+        <translation>UVC名称</translation>
+    </message>
+    <message>
+        <source>UAC Name</source>
+        <translation>UAC名称</translation>
+    </message>
+    <message>
+        <source>Product Name</source>
+        <translation>产品名称</translation>
+    </message>
+    <message>
+        <source>Reset</source>
+        <translation>恢复出厂</translation>
+    </message>
+    <message>
+        <source>Factory Reset</source>
+        <translation>恢复出厂</translation>
+    </message>
+    <message>
+        <source>Restore device to factory settings?</source>
+        <translation>是否将设备恢复出厂设置？</translation>
+    </message>
+</context>
+<context>
+    <name>UC1218_4K_Edid_Form</name>
+    <message>
+        <source>Mode</source>
+        <translation>模式</translation>
+    </message>
+    <message>
+        <source>Content</source>
+        <translation>数据</translation>
+    </message>
+    <message>
+        <source>Auto</source>
+        <translation>自适应</translation>
+    </message>
+    <message>
+        <source>Pre-saved</source>
+        <translation>预存储</translation>
+    </message>
+    <message>
+        <source>Bypass</source>
+        <translation>跟随</translation>
+    </message>
+    <message>
+        <source>EDID Mode</source>
+        <translation>EDID模式</translation>
+    </message>
+    <message>
+        <source>AUTO EDID</source>
+        <translation>自适应EDID</translation>
+    </message>
+    <message>
+        <source>Pre-saved EDID</source>
+        <translation>预存储EDID</translation>
+    </message>
+    <message>
+        <source>Bypass EDID</source>
+        <translation>跟随EDID</translation>
+    </message>
+    <message>
+        <source>EDID Information</source>
+        <translation>EDID信息</translation>
+    </message>
+    <message>
+        <source>Export</source>
+        <translation>导出</translation>
+    </message>
+    <message>
+        <source>Import</source>
+        <translation>导入</translation>
+    </message>
+    <message>
+        <source>Delete</source>
+        <translation>删除</translation>
+    </message>
+    <message>
+        <source>Apply</source>
+        <translation>应用</translation>
+    </message>
+    <message>
+        <source>Default</source>
+        <translation>默认</translation>
+    </message>
+    <message>
+        <source>Yes</source>
+        <translation>确认</translation>
+    </message>
+    <message>
+        <source>No</source>
+        <translation>取消</translation>
+    </message>
+    <message>
+        <source>EDID Management</source>
+        <translation>EDID配置</translation>
+    </message>
+    <message>
+        <source>Open EDID File</source>
+        <translation>打开EDID文件</translation>
+    </message>
+    <message>
+        <source>EDID Bin Files (*.bin);;EDID XML Files (*.xml);;All Files (*)</source>
+        <translation>EDID Bin文件 (*.bin);;EDID XML文件 (*.xml);;所有文件 (*)</translation>
+    </message>
+    <message>
+        <source>EDID import failed: EDID table is full.</source>
+        <translation>EDID导入失败：EDID列表已满。</translation>
+    </message>
+    <message>
+        <source>Failed to import EDID!</source>
+        <translation>导入EDID失败！</translation>
+    </message>
+    <message>
+        <source>XML file will been support later.</source>
+        <translation>还未支持XML文件。</translation>
+    </message>
+    <message>
+        <source>This file type is unsupported.</source>
+        <translation>暂不支持该文件类型。</translation>
+    </message>
+    <message>
+        <source>Save EDID File</source>
+        <translation>保存EDID文件</translation>
+    </message>
+    <message>
+        <source>EDID Bin Files (*.bin);;All Files (*)</source>
+        <translation>EDID Bin文件 (*.bin);;所有文件 (*)</translation>
+    </message>
+    <message>
+        <source>Export EDID Data</source>
+        <translation>导出EDID数据</translation>
+    </message>
+    <message>
+        <source>EDID exported successfully!</source>
+        <translation>EDID导出成功！</translation>
+    </message>
+    <message>
+        <source>Rename</source>
+        <translation>重命名</translation>
+    </message>
+    <message>
+        <source>OK</source>
+        <translation>确认</translation>
+    </message>
+    <message>
+        <source>Importing EDID, please wait...</source>
+        <translation>正在导入EDID，请等待...</translation>
+    </message>
+    <message>
+        <source>Deleting EDID, please wait...</source>
+        <translation>正在删除EDID，请等待...</translation>
+    </message>
+    <message>
+        <source>EDID is being enabled.</source>
+        <translation>EDID正在启用。</translation>
+    </message>
+    <message>
+        <source>EDID imported successfully!</source>
+        <translation>EDID导入成功！</translation>
+    </message>
+    <message>
+        <source>EDID deleted successfully!</source>
+        <translation>EDID删除成功！</translation>
+    </message>
+    <message>
+        <source>EDID enabled successfully.</source>
+        <translation>EDID已成功启用。</translation>
+    </message>
+    <message>
+        <source>EDID import failed: Name already exists.</source>
+        <translation>EDID导入失败：名称已存在。</translation>
+    </message>
+    <message>
+        <source>EDID import failed: Name exceeds 32 characters.</source>
+        <translation>EDID导入失败：名称超出32字符。</translation>
+    </message>
+    <message>
+        <source>EDID import failed: Get table index error.</source>
+        <translation>EDID导入失败：EDID表ID错误。</translation>
+    </message>
+</context>
+<context>
+    <name>UC1218_4K_Video_Setting_Form</name>
+    <message>
+        <source>YUV2RGB</source>
+        <translation>YUV2RGB</translation>
+    </message>
+    <message>
+        <source>Color Range</source>
+        <translation>色彩空间</translation>
+    </message>
+    <message>
+        <source>Limited Range</source>
+        <translation>有限输出</translation>
+    </message>
+    <message>
+        <source>Full Range</source>
+        <translation>完全输出</translation>
+    </message>
+    <message>
+        <source>Bypass</source>
+        <translation>跟随</translation>
+    </message>
+    <message>
+        <source>RGB2YUV</source>
+        <translation>RGB2YUV</translation>
+    </message>
+    <message>
+        <source>Video Control</source>
+        <translation>视频控制</translation>
+    </message>
+    <message>
+        <source>Brightness</source>
+        <translation>亮度</translation>
+    </message>
+    <message>
+        <source>Contrast</source>
+        <translation>对比度</translation>
+    </message>
+    <message>
+        <source>Saturation</source>
+        <translation>饱和度</translation>
+    </message>
+    <message>
+        <source>Hue</source>
+        <translation>色度</translation>
+    </message>
+</context>
+</TS>

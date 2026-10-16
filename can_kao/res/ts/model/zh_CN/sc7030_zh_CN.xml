@@ -1,0 +1,99 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!DOCTYPE TS>
+<TS version="2.1">
+    <context>
+        <name>SC7030_Setting_Form</name>
+        <message>
+            <source>Form</source>
+            <translation type="unfinished" />
+        </message>
+        <message>
+            <source>Manufacturer:</source>
+            <translation>制造商：</translation>
+        </message>
+        <message>
+            <source>SN:</source>
+            <translation>序列号：</translation>
+        </message>
+        <message>
+            <source>MCU Mode:</source>
+            <translation>MCU 模式：</translation>
+        </message>
+        <message>
+            <source>Protocol Version:</source>
+            <translation>协议版本：</translation>
+        </message>
+        <message>
+            <source>Boot Version:</source>
+            <translation>Boot版本：</translation>
+        </message>
+        <message>
+            <source>APP Version:</source>
+            <translation>应用版本：</translation>
+        </message>
+        <message>
+            <source>FPGA Version:</source>
+            <translation>FPGA 版本：</translation>
+        </message>
+        <message>
+            <source>Hardware Version:</source>
+            <translation>硬件版本：</translation>
+        </message>
+        <message>
+            <source>SDI/HDMI Output:</source>
+            <translation>输出分辨率：</translation>
+        </message>
+        <message>
+            <source>Video Input:</source>
+            <translation>视频输入模式：</translation>
+        </message>
+        <message>
+            <source>Audio Input:</source>
+            <translation>音频输入：</translation>
+        </message>
+        <message>
+            <source>Follow Input</source>
+            <translation>跟随输入</translation>
+        </message>
+        <message>
+            <source>Analog Audio</source>
+            <translation>模拟加嵌</translation>
+        </message>
+        <message>
+            <source>Aspect Ratio:</source>
+            <translation>接收比例：</translation>
+        </message>
+        <message>
+            <source>16 : 9</source>
+            <translation type="unfinished" />
+        </message>
+        <message>
+            <source>4 : 3</source>
+            <translation type="unfinished" />
+        </message>
+        <message>
+            <source>Color Range:</source>
+            <translation>色彩范围:</translation>
+        </message>
+        <message>
+            <source>Full Range</source>
+            <translation>完全输出</translation>
+        </message>
+        <message>
+            <source>Limited Range</source>
+            <translation>有限输出</translation>
+        </message>
+        <message>
+            <source>SDI Output:</source>
+            <translation>SDI输出：</translation>
+        </message>
+        <message>
+            <source>3G Level-A</source>
+            <translation type="unfinished" />
+        </message>
+        <message>
+            <source>3G Level-B</source>
+            <translation type="unfinished" />
+        </message>
+    </context>
+</TS>

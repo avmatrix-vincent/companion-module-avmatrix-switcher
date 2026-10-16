@@ -1,0 +1,1368 @@
+<?xml version='1.0' encoding='utf-8'?>
+<TS version="2.1">
+    <context>
+        <name>Form</name>
+        <message>
+            <location filename="../../src/ui/cue01/input_status_widget.ui" line="14" />
+            <source>Form</source>
+            <translation type="unfinished" />
+        </message>
+        <message>
+            <location filename="../../src/ui/cue01/input_status_widget.ui" line="54" />
+            <source>Foreground</source>
+            <translation>前景</translation>
+        </message>
+        <message>
+            <location filename="../../src/ui/cue01/input_status_widget.ui" line="94" />
+            <location filename="../../src/ui/cue01/input_status_widget.ui" line="407" />
+            <location filename="../../src/ui/cue01/input_status_widget.ui" line="638" />
+            <source>Format   </source>
+            <translation>格式  </translation>
+        </message>
+        <message>
+            <location filename="../../src/ui/cue01/input_status_widget.ui" line="120" />
+            <location filename="../../src/ui/cue01/input_status_widget.ui" line="440" />
+            <location filename="../../src/ui/cue01/input_status_widget.ui" line="648" />
+            <source>Bit Depth   </source>
+            <translation>位深  </translation>
+        </message>
+        <message>
+            <location filename="../../src/ui/cue01/input_status_widget.ui" line="133" />
+            <location filename="../../src/ui/cue01/input_status_widget.ui" line="420" />
+            <location filename="../../src/ui/cue01/input_status_widget.ui" line="628" />
+            <source>Color Space   </source>
+            <translation>色彩空间  </translation>
+        </message>
+        <message>
+            <location filename="../../src/ui/cue01/input_status_widget.ui" line="165" />
+            <location filename="../../src/ui/cue01/input_status_widget.ui" line="430" />
+            <location filename="../../src/ui/cue01/input_status_widget.ui" line="618" />
+            <source>Range   </source>
+            <translation>范围  </translation>
+        </message>
+        <message>
+            <location filename="../../src/ui/cue01/input_status_widget.ui" line="294" />
+            <source>Background</source>
+            <translation>背景</translation>
+        </message>
+        <message>
+            <location filename="../../src/ui/cue01/input_status_widget.ui" line="534" />
+            <source>AUX</source>
+            <translation>辅助</translation>
+        </message>
+    </context>
+    <context>
+        <name>Form</name>
+        <message>
+            <location filename="../../src/ui/cue01/lumaKeyWidget.ui" line="14" />
+            <source>Form</source>
+            <translation type="unfinished" />
+        </message>
+        <message>
+            <location filename="../../src/ui/cue01/lumaKeyWidget.ui" line="62"/>
+            <source>Luma Status</source>
+            <translation>亮度键状态</translation>
+        </message>
+        <message>
+            <location filename="../../src/ui/cue01/lumaKeyWidget.ui" line="69"/>
+            <source>Inactive</source>
+            <translation>未使用</translation>
+        </message>
+        <message>
+            <location filename="../../src/ui/cue01/lumaKeyWidget.ui" line="67" />
+            <source>Fill Source</source>
+            <translation>填充源</translation>
+        </message>
+        <message>
+            <location filename="../../src/ui/cue01/lumaKeyWidget.ui" line="84" />
+            <source>Tolerance Curve</source>
+            <translation>容忍度曲线开关</translation>
+        </message>
+        <message>
+            <location filename="../../src/ui/cue01/lumaKeyWidget.ui" line="107" />
+            <source>Tolerance Invert</source>
+            <translation>容忍度反转开关</translation>
+        </message>
+        <message>
+            <location filename="../../src/ui/cue01/lumaKeyWidget.ui" line="121" />
+            <source>Tolerance</source>
+            <translation>容忍度范围</translation>
+        </message>
+        <message>
+            <location filename="../../src/ui/cue01/lumaKeyWidget.ui" line="145" />
+            <source>Tolerance Unit Step</source>
+            <translation>容忍度单位步长</translation>
+        </message>
+        <message>
+            <location filename="../../src/ui/cue01/lumaKeyWidget.ui" line="175" />
+            <source>Key Clip On/Off</source>
+            <translation>限幅开关</translation>
+        </message>
+        <message>
+            <location filename="../../src/ui/cue01/lumaKeyWidget.ui" line="198" />
+            <source>Key Clip Curve</source>
+            <translation>限幅曲线开关</translation>
+        </message>
+        <message>
+            <location filename="../../src/ui/cue01/lumaKeyWidget.ui" line="212" />
+            <source>Key Clip</source>
+            <translation>限幅范围</translation>
+        </message>
+    </context>
+    <context>
+        <name>LumaKeyWidget</name>
+        <message>
+            <location filename="../../src/view/cue01/lumaKeyWidget.py" line="84"/>
+            <location filename="../../src/view/cue01/lumaKeyWidget.py" line="270"/>
+            <source>Active</source>
+            <translation>使用中</translation>
+        </message>
+        <message>
+            <location filename="../../src/view/cue01/lumaKeyWidget.py" line="93"/>
+            <location filename="../../src/view/cue01/lumaKeyWidget.py" line="266"/>
+            <source>Inactive</source>
+            <translation>未使用</translation>
+        </message>
+    </context>
+    <context>
+        <name>Form</name>
+        <message>
+            <location filename="../../src/ui/cue01/networkSettingWidget.ui" line="14" />
+            <source>Form</source>
+            <translation type="unfinished" />
+        </message>
+        <message>
+            <location filename="../../src/ui/cue01/networkSettingWidget.ui" line="82" />
+            <source>Subnet Mask</source>
+            <translation>子网掩码</translation>
+        </message>
+        <message>
+            <location filename="../../src/ui/cue01/networkSettingWidget.ui" line="92" />
+            <source>Gateway</source>
+            <translation>网关</translation>
+        </message>
+        <message>
+            <location filename="../../src/ui/cue01/networkSettingWidget.ui" line="118" />
+            <source>Save</source>
+            <translation>保存</translation>
+        </message>
+        <message>
+            <location filename="../../src/ui/cue01/networkSettingWidget.ui" line="125" />
+            <source>IP</source>
+            <translation type="unfinished" />
+        </message>
+        <message>
+            <location filename="../../src/ui/cue01/networkSettingWidget.ui" line="145" />
+            <source>DHCP ON/OFF</source>
+            <translation>DHCP 开/关</translation>
+        </message>
+    </context>
+    <context>
+        <name>Form</name>
+        <message>
+            <location filename="../../src/ui/cue01/outputInterfaceWidget.ui" line="14" />
+            <source>Form</source>
+            <translation type="unfinished" />
+        </message>
+        <message>
+            <location filename="../../src/ui/cue01/outputInterfaceWidget.ui" line="50" />
+            <source>Output PVW</source>
+            <translation>输出 PVW</translation>
+        </message>
+        <message>
+            <location filename="../../src/ui/cue01/outputInterfaceWidget.ui" line="77" />
+            <location filename="../../src/ui/cue01/outputInterfaceWidget.ui" line="204" />
+            <location filename="../../src/ui/cue01/outputInterfaceWidget.ui" line="331" />
+            <location filename="../../src/ui/cue01/outputInterfaceWidget.ui" line="458" />
+            <source>Format</source>
+            <translation>格式</translation>
+        </message>
+        <message>
+            <location filename="../../src/ui/cue01/outputInterfaceWidget.ui" line="113" />
+            <location filename="../../src/ui/cue01/outputInterfaceWidget.ui" line="240" />
+            <location filename="../../src/ui/cue01/outputInterfaceWidget.ui" line="367" />
+            <location filename="../../src/ui/cue01/outputInterfaceWidget.ui" line="494" />
+            <source>Color Space</source>
+            <translation>色彩空间</translation>
+        </message>
+        <message>
+            <location filename="../../src/ui/cue01/outputInterfaceWidget.ui" line="149" />
+            <location filename="../../src/ui/cue01/outputInterfaceWidget.ui" line="276" />
+            <location filename="../../src/ui/cue01/outputInterfaceWidget.ui" line="403" />
+            <location filename="../../src/ui/cue01/outputInterfaceWidget.ui" line="530" />
+            <source>Range</source>
+            <translation>范围</translation>
+        </message>
+        <message>
+            <location filename="../../src/ui/cue01/outputInterfaceWidget.ui" line="177" />
+            <source>Output PGM MATTE</source>
+            <translation>输出 PGM MATTE</translation>
+        </message>
+        <message>
+            <location filename="../../src/ui/cue01/outputInterfaceWidget.ui" line="304" />
+            <source>Output PGM FULL</source>
+            <translation>输出 PGM FULL</translation>
+        </message>
+        <message>
+            <location filename="../../src/ui/cue01/outputInterfaceWidget.ui" line="431" />
+            <source>Output PGM</source>
+            <translation>输出 PGM</translation>
+        </message>
+        <message>
+            <location filename="../../src/ui/cue01/outputInterfaceWidget.ui" line="571" />
+            <source>Aux Output</source>
+            <translation>辅助输出</translation>
+        </message>
+        <message>
+            <location filename="../../src/ui/cue01/outputInterfaceWidget.ui" line="581" />
+            <source>Output Format</source>
+            <translation>输出格式</translation>
+        </message>
+    </context>
+    <context>
+        <name>Form</name>
+        <message>
+            <location filename="../../src/ui/cue01/referenceInputWidget.ui" line="14" />
+            <source>Form</source>
+            <translation type="unfinished" />
+        </message>
+        <message>
+            <location filename="../../src/ui/cue01/referenceInputWidget.ui" line="64" />
+            <source>Reference</source>
+            <translation>外同步信号</translation>
+        </message>
+        <message>
+            <location filename="../../src/ui/cue01/referenceInputWidget.ui" line="84" />
+            <source>Format</source>
+            <translation>格式</translation>
+        </message>
+    </context>
+    <context>
+        <name>Form</name>
+        <message>
+            <location filename="../../src/ui/cue01/uskWidget.ui" line="14" />
+            <source>Form</source>
+            <translation type="unfinished" />
+        </message>
+        <message>
+            <location filename="../../src/ui/cue01/uskWidget.ui" line="50" />
+            <source>USK PIP</source>
+            <translation>上游键 PIP</translation>
+        </message>
+        <message>
+            <location filename="../../src/ui/cue01/uskWidget.ui" line="86" />
+            <location filename="../../src/ui/cue01/uskWidget.ui" line="307" />
+            <source>PIP ON/OFF</source>
+            <translation>PIP 开/关</translation>
+        </message>
+        <message>
+            <location filename="../../src/ui/cue01/uskWidget.ui" line="156" />
+            <source>Vertical</source>
+            <translation>纵坐标</translation>
+        </message>
+        <message>
+            <location filename="../../src/ui/cue01/uskWidget.ui" line="178" />
+            <source>Horizontal</source>
+            <translation>横坐标</translation>
+        </message>
+        <message>
+            <location filename="../../src/ui/cue01/uskWidget.ui" line="225" />
+            <source>Width</source>
+            <translation>宽度</translation>
+        </message>
+        <message>
+            <location filename="../../src/ui/cue01/uskWidget.ui" line="247" />
+            <source>Height</source>
+            <translation>高度</translation>
+        </message>
+        <message>
+            <location filename="../../src/ui/cue01/uskWidget.ui" line="271" />
+            <source>USK Mask</source>
+            <translation>上游键 遮罩</translation>
+        </message>
+        <message>
+            <location filename="../../src/ui/cue01/uskWidget.ui" line="358" />
+            <source>Top</source>
+            <translation>顶部</translation>
+        </message>
+        <message>
+            <location filename="../../src/ui/cue01/uskWidget.ui" line="383" />
+            <source>Left</source>
+            <translation>左侧</translation>
+        </message>
+        <message>
+            <location filename="../../src/ui/cue01/uskWidget.ui" line="446" />
+            <source>Bottom</source>
+            <translation>底部</translation>
+        </message>
+        <message>
+            <location filename="../../src/ui/cue01/uskWidget.ui" line="468" />
+            <source>Right</source>
+            <translation>右侧</translation>
+        </message>
+        <message>
+            <location filename="../../src/ui/cue01/uskWidget.ui" line="492" />
+            <source>USK Edge</source>
+            <translation>USK 边缘</translation>
+        </message>
+        <message>
+            <location filename="../../src/ui/cue01/uskWidget.ui" line="572" />
+            <source>Stage 1</source>
+            <translation>层次 1</translation>
+        </message>
+        <message>
+            <location filename="../../src/ui/cue01/uskWidget.ui" line="618" />
+            <location filename="../../src/ui/cue01/uskWidget.ui" line="847" />
+            <source>OFF</source>
+            <translation>关闭</translation>
+        </message>
+        <message>
+            <location filename="../../src/ui/cue01/uskWidget.ui" line="669" />
+            <location filename="../../src/ui/cue01/uskWidget.ui" line="901" />
+            <source>Erode 3x3</source>
+            <translation type="unfinished" />
+        </message>
+        <message>
+            <location filename="../../src/ui/cue01/uskWidget.ui" line="691" />
+            <location filename="../../src/ui/cue01/uskWidget.ui" line="939" />
+            <source>Gaussian 3x3</source>
+            <translation type="unfinished" />
+        </message>
+        <message>
+            <location filename="../../src/ui/cue01/uskWidget.ui" line="710" />
+            <location filename="../../src/ui/cue01/uskWidget.ui" line="958" />
+            <source>Erode 5x5</source>
+            <translation type="unfinished" />
+        </message>
+        <message>
+            <location filename="../../src/ui/cue01/uskWidget.ui" line="729" />
+            <location filename="../../src/ui/cue01/uskWidget.ui" line="977" />
+            <source>Dilate 5x5</source>
+            <translation type="unfinished" />
+        </message>
+        <message>
+            <location filename="../../src/ui/cue01/uskWidget.ui" line="748" />
+            <location filename="../../src/ui/cue01/uskWidget.ui" line="996" />
+            <source>Gaussian 5x5</source>
+            <translation type="unfinished" />
+        </message>
+        <message>
+            <location filename="../../src/ui/cue01/uskWidget.ui" line="767" />
+            <location filename="../../src/ui/cue01/uskWidget.ui" line="920" />
+            <source>Dilate 3x3</source>
+            <translation type="unfinished" />
+        </message>
+        <message>
+            <location filename="../../src/ui/cue01/uskWidget.ui" line="801" />
+            <source>Stage 2</source>
+            <translation>层次 2</translation>
+        </message>
+    </context>
+    <context>
+        <name>Form</name>
+        <message>
+            <location filename="../../src/ui/cue01/color_selector_widget.ui" line="14" />
+            <source>Form</source>
+            <translation type="unfinished" />
+        </message>
+    </context>
+    <context>
+        <name>SystemSettingWidget</name>
+        <message>
+            <location filename="../../src/view/cue01/systemSettingWidget.py" line="32" />
+            <source>Language：</source>
+            <translation>语言：</translation>
+        </message>
+        <message>
+            <location filename="../../src/view/cue01/systemSettingWidget.py" line="43" />
+            <source>Fan Setting：</source>
+            <translation>风扇：</translation>
+        </message>
+        <message>
+            <location filename="../../src/view/cue01/systemSettingWidget.py" line="54" />
+            <source>System Reset：</source>
+            <translation>系统重置：</translation>
+        </message>
+        <message>
+            <location filename="../../src/view/cue01/systemSettingWidget.py" line="60" />
+            <source>Reset</source>
+            <translation>重置</translation>
+        </message>
+        <message>
+            <location filename="../../src/view/cue01/systemSettingWidget.py" line="67" />
+            <source>MCU Version：</source>
+            <translation>单片机版本：</translation>
+        </message>
+        <message>
+            <location filename="../../src/view/cue01/systemSettingWidget.py" line="77" />
+            <source>System Version：</source>
+            <translation>系统版本：</translation>
+        </message>
+        <message>
+            <location filename="../../src/view/cue01/systemSettingWidget.py" line="87" />
+            <source>Keyboard Version：</source>
+            <translation>按键版本：</translation>
+        </message>
+        <message>
+            <location filename="../../src/view/cue01/systemSettingWidget.py" line="97" />
+            <source>Hardware Version：</source>
+            <translation>硬件版本：</translation>
+        </message>
+    </context>
+    <context>
+        <name>ChromaKeyWidget</name>
+        <message>
+            <location filename="../../src/view/cue01/chromaKeyWidget.py" line="34" />
+            <source>Fill Source</source>
+            <translation>填充源</translation>
+        </message>
+        <message>
+            <location filename="../../src/view/cue01/chromaKeyWidget.py" line="52"/>
+            <source>Chroma Status</source>
+            <translation>色度键状态</translation>
+        </message>
+        <message>
+            <location filename="../../src/view/cue01/chromaKeyWidget.py" line="55"/>
+            <location filename="../../src/view/cue01/chromaKeyWidget.py" line="1069"/>
+            <location filename="../../src/view/cue01/chromaKeyWidget.py" line="1442"/>
+            <source>Inactive</source>
+            <translation>未使用</translation>
+        </message>
+        <message>
+            <location filename="../../src/view/cue01/chromaKeyWidget.py" line="1061"/>
+            <location filename="../../src/view/cue01/chromaKeyWidget.py" line="1446"/>
+            <source>Active</source>
+            <translation>使用中</translation>
+        </message>
+        <message>
+            <location filename="../../src/view/cue01/chromaKeyWidget.py" line="59"/>
+            <source>Chroma Key Color</source>
+            <translation>色度键色彩</translation>
+        </message>
+        <message>
+            <location filename="../../src/view/cue01/chromaKeyWidget.py" line="46" />
+            <source>Video Source</source>
+            <translation>视频源</translation>
+        </message>
+        <message>
+            <location filename="../../src/view/cue01/chromaKeyWidget.py" line="69" />
+            <source>Chroma Fetch</source>
+            <translation>色彩采样</translation>
+        </message>
+        <message>
+            <location filename="../../src/view/cue01/chromaKeyWidget.py" line="79" />
+            <source>Fetch</source>
+            <translation>采样</translation>
+        </message>
+        <message>
+            <location filename="../../src/view/cue01/chromaKeyWidget.py" line="85" />
+            <source>Fetch Manually</source>
+            <translation>手动采样</translation>
+        </message>
+        <message>
+            <location filename="../../src/view/cue01/chromaKeyWidget.py" line="112" />
+            <source>Chroma Color Key</source>
+            <translation>色彩键</translation>
+        </message>
+        <message>
+            <location filename="../../src/view/cue01/chromaKeyWidget.py" line="124" />
+            <location filename="../../src/view/cue01/chromaKeyWidget.py" line="721" />
+            <source>Red</source>
+            <translation>红</translation>
+        </message>
+        <message>
+            <location filename="../../src/view/cue01/chromaKeyWidget.py" line="144" />
+            <location filename="../../src/view/cue01/chromaKeyWidget.py" line="740" />
+            <source>Green</source>
+            <translation>绿</translation>
+        </message>
+        <message>
+            <location filename="../../src/view/cue01/chromaKeyWidget.py" line="164" />
+            <location filename="../../src/view/cue01/chromaKeyWidget.py" line="759" />
+            <source>Blue</source>
+            <translation>蓝</translation>
+        </message>
+        <message>
+            <location filename="../../src/view/cue01/chromaKeyWidget.py" line="184" />
+            <source>Angle</source>
+            <translation>角度</translation>
+        </message>
+        <message>
+            <location filename="../../src/view/cue01/chromaKeyWidget.py" line="204" />
+            <source>Tolerance</source>
+            <translation>容忍度</translation>
+        </message>
+        <message>
+            <location filename="../../src/view/cue01/chromaKeyWidget.py" line="224" />
+            <source>Softness</source>
+            <translation>柔化度</translation>
+        </message>
+        <message>
+            <location filename="../../src/view/cue01/chromaKeyWidget.py" line="281" />
+            <source>Chroma Key Setting</source>
+            <translation>键设置</translation>
+        </message>
+        <message>
+            <location filename="../../src/view/cue01/chromaKeyWidget.py" line="292" />
+            <source>Foreground</source>
+            <translation>前景</translation>
+        </message>
+        <message>
+            <location filename="../../src/view/cue01/chromaKeyWidget.py" line="310" />
+            <location filename="../../src/view/cue01/chromaKeyWidget.py" line="494" />
+            <source>Background</source>
+            <translation>背景</translation>
+        </message>
+        <message>
+            <location filename="../../src/view/cue01/chromaKeyWidget.py" line="328" />
+            <source>Key Edge</source>
+            <translation>边缘</translation>
+        </message>
+        <message>
+            <location filename="../../src/view/cue01/chromaKeyWidget.py" line="369" />
+            <source>Chroma Key Clip</source>
+            <translation>键限幅</translation>
+        </message>
+        <message>
+            <location filename="../../src/view/cue01/chromaKeyWidget.py" line="380" />
+            <source>Clip On/Off</source>
+            <translation>开/关</translation>
+        </message>
+        <message>
+            <location filename="../../src/view/cue01/chromaKeyWidget.py" line="389" />
+            <source>Curve On/Off</source>
+            <translation>曲线 开/关</translation>
+        </message>
+        <message>
+            <location filename="../../src/view/cue01/chromaKeyWidget.py" line="398" />
+            <source>Key Clip</source>
+            <translation>限幅</translation>
+        </message>
+        <message>
+            <location filename="../../src/view/cue01/chromaKeyWidget.py" line="456" />
+            <source>Chroma Spill Correction</source>
+            <translation>溢出校正</translation>
+        </message>
+        <message>
+            <location filename="../../src/view/cue01/chromaKeyWidget.py" line="467" />
+            <source>Spill On/Off</source>
+            <translation>开/关</translation>
+        </message>
+        <message>
+            <location filename="../../src/view/cue01/chromaKeyWidget.py" line="476" />
+            <source>Spill Edge</source>
+            <translation>边缘溢出</translation>
+        </message>
+        <message>
+            <location filename="../../src/view/cue01/chromaKeyWidget.py" line="546" />
+            <source>Chroma Spill Correction2</source>
+            <translation>溢出校正2</translation>
+        </message>
+        <message>
+            <location filename="../../src/view/cue01/chromaKeyWidget.py" line="556" />
+            <source>Spill2 On/Off</source>
+            <translation>开/关</translation>
+        </message>
+        <message>
+            <location filename="../../src/view/cue01/chromaKeyWidget.py" line="565" />
+            <source>Spill2 Color</source>
+            <translation>溢出颜色</translation>
+        </message>
+        <message>
+            <location filename="../../src/view/cue01/chromaKeyWidget.py" line="601" />
+            <source>Spill2 Reset</source>
+            <translation>溢出重置</translation>
+        </message>
+        <message>
+            <location filename="../../src/view/cue01/chromaKeyWidget.py" line="608" />
+            <location filename="../../src/view/cue01/chromaKeyWidget.py" line="777" />
+            <location filename="../../src/view/cue01/chromaKeyWidget.py" line="784" />
+            <source>Reset</source>
+            <translation>重置</translation>
+        </message>
+        <message>
+            <location filename="../../src/view/cue01/chromaKeyWidget.py" line="652" />
+            <source>Chroma Color Adjustment</source>
+            <translation>色彩调整</translation>
+        </message>
+        <message>
+            <location filename="../../src/view/cue01/chromaKeyWidget.py" line="664" />
+            <source>Brightness</source>
+            <translation>亮度</translation>
+        </message>
+        <message>
+            <location filename="../../src/view/cue01/chromaKeyWidget.py" line="683" />
+            <source>Contract</source>
+            <translation>对比度</translation>
+        </message>
+        <message>
+            <location filename="../../src/view/cue01/chromaKeyWidget.py" line="702" />
+            <source>Saturation</source>
+            <translation>饱和度</translation>
+        </message>
+    </context>
+    <context>
+        <name>ColorGenerationWidget</name>
+        <message>
+            <location filename="../../src/view/cue01/colorGenerationWidget.py" line="70" />
+            <source>Color1</source>
+            <translation>颜色 1</translation>
+        </message>
+        <message>
+            <location filename="../../src/view/cue01/colorGenerationWidget.py" line="71" />
+            <source>Color2</source>
+            <translation>颜色 2</translation>
+        </message>
+    </context>
+    <context>
+        <name>Form</name>
+        <message>
+            <location filename="../../src/ui/cue01/dskWidget.ui" line="14" />
+            <source>Form</source>
+            <translation type="unfinished" />
+        </message>
+        <message>
+            <location filename="../../src/ui/cue01/dskWidget.ui" line="36" />
+            <source>Fill Source</source>
+            <translation>填充源</translation>
+        </message>
+        <message>
+            <location filename="../../src/ui/cue01/dskWidget.ui" line="78" />
+            <source>Video Source</source>
+            <translation>视频源</translation>
+        </message>
+        <message>
+            <location filename="../../src/ui/cue01/dskWidget.ui" line="131" />
+            <source>DSK Tolerance</source>
+            <translation>下游键 容忍度</translation>
+        </message>
+        <message>
+            <location filename="../../src/ui/cue01/dskWidget.ui" line="182" />
+            <source>Invert</source>
+            <translation>反转</translation>
+        </message>
+        <message>
+            <location filename="../../src/ui/cue01/dskWidget.ui" line="253" />
+            <source>Tolerance</source>
+            <translation>容忍度</translation>
+        </message>
+        <message>
+            <location filename="../../src/ui/cue01/dskWidget.ui" line="336" />
+            <source>Unit Step</source>
+            <translation>单位步长</translation>
+        </message>
+        <message>
+            <location filename="../../src/ui/cue01/dskWidget.ui" line="406" />
+            <source>DSK Clip</source>
+            <translation>下游键 限幅</translation>
+        </message>
+        <message>
+            <location filename="../../src/ui/cue01/dskWidget.ui" line="454" />
+            <source>Clip ON/OFF</source>
+            <translation>限幅 开/关</translation>
+        </message>
+        <message>
+            <location filename="../../src/ui/cue01/dskWidget.ui" line="505" />
+            <source>Curve ON/OFF</source>
+            <translation>曲线 开/关</translation>
+        </message>
+        <message>
+            <location filename="../../src/ui/cue01/dskWidget.ui" line="569" />
+            <source>Clip</source>
+            <translation>限幅</translation>
+        </message>
+        <message>
+            <location filename="../../src/ui/cue01/dskWidget.ui" line="649" />
+            <source>PGM Level</source>
+            <translation>PGM 水平</translation>
+        </message>
+        <message>
+            <location filename="../../src/ui/cue01/dskWidget.ui" line="687" />
+            <source>PVW Level</source>
+            <translation>PVM 水平</translation>
+        </message>
+        <message>
+            <location filename="../../src/ui/cue01/dskWidget.ui" line="731" />
+            <source>DSK PIP</source>
+            <translation>下游键 PIP</translation>
+        </message>
+        <message>
+            <location filename="../../src/ui/cue01/dskWidget.ui" line="779" />
+            <source>PIP ON/OFF</source>
+            <translation>PIP 开/关</translation>
+        </message>
+        <message>
+            <location filename="../../src/ui/cue01/dskWidget.ui" line="830" />
+            <source>Horizontal</source>
+            <translation>横坐标</translation>
+        </message>
+        <message>
+            <location filename="../../src/ui/cue01/dskWidget.ui" line="868" />
+            <source>Vertical</source>
+            <translation>纵坐标</translation>
+        </message>
+        <message>
+            <location filename="../../src/ui/cue01/dskWidget.ui" line="906" />
+            <source>Width</source>
+            <translation>宽度</translation>
+        </message>
+        <message>
+            <location filename="../../src/ui/cue01/dskWidget.ui" line="944" />
+            <source>Height</source>
+            <translation>高度</translation>
+        </message>
+        <message>
+            <location filename="../../src/ui/cue01/dskWidget.ui" line="983" />
+            <source>DSK Mask</source>
+            <translation>下游键 遮罩</translation>
+        </message>
+        <message>
+            <location filename="../../src/ui/cue01/dskWidget.ui" line="1031" />
+            <source>Mask ON/OFF</source>
+            <translation>遮罩 开/关</translation>
+        </message>
+        <message>
+            <location filename="../../src/ui/cue01/dskWidget.ui" line="1082" />
+            <source>Top</source>
+            <translation>顶部</translation>
+        </message>
+        <message>
+            <location filename="../../src/ui/cue01/dskWidget.ui" line="1120" />
+            <source>Bottom</source>
+            <translation>底部</translation>
+        </message>
+        <message>
+            <location filename="../../src/ui/cue01/dskWidget.ui" line="1158" />
+            <source>Left</source>
+            <translation>左侧</translation>
+        </message>
+        <message>
+            <location filename="../../src/ui/cue01/dskWidget.ui" line="1196" />
+            <source>Right</source>
+            <translation>右侧</translation>
+        </message>
+    </context>
+    <context>
+        <name>Form</name>
+        <message>
+            <location filename="../../src/ui/cue01/inputEnhancementWidget.ui" line="14" />
+            <source>Form</source>
+            <translation type="unfinished" />
+        </message>
+        <message>
+            <location filename="../../src/ui/cue01/inputEnhancementWidget.ui" line="59" />
+            <source>Foreground</source>
+            <translation>前景</translation>
+        </message>
+        <message>
+            <location filename="../../src/ui/cue01/inputEnhancementWidget.ui" line="93" />
+            <location filename="../../src/ui/cue01/inputEnhancementWidget.ui" line="522" />
+            <location filename="../../src/ui/cue01/inputEnhancementWidget.ui" line="981" />
+            <source>Brightness</source>
+            <translation>亮度</translation>
+        </message>
+        <message>
+            <location filename="../../src/ui/cue01/inputEnhancementWidget.ui" line="103" />
+            <location filename="../../src/ui/cue01/inputEnhancementWidget.ui" line="542" />
+            <location filename="../../src/ui/cue01/inputEnhancementWidget.ui" line="951" />
+            <source>Contrast</source>
+            <translation>对比度</translation>
+        </message>
+        <message>
+            <location filename="../../src/ui/cue01/inputEnhancementWidget.ui" line="113" />
+            <location filename="../../src/ui/cue01/inputEnhancementWidget.ui" line="532" />
+            <location filename="../../src/ui/cue01/inputEnhancementWidget.ui" line="971" />
+            <source>Saturation</source>
+            <translation>饱和度</translation>
+        </message>
+        <message>
+            <location filename="../../src/ui/cue01/inputEnhancementWidget.ui" line="123" />
+            <location filename="../../src/ui/cue01/inputEnhancementWidget.ui" line="552" />
+            <location filename="../../src/ui/cue01/inputEnhancementWidget.ui" line="961" />
+            <source>Hue</source>
+            <translation>色相</translation>
+        </message>
+        <message>
+            <location filename="../../src/ui/cue01/inputEnhancementWidget.ui" line="168" />
+            <location filename="../../src/ui/cue01/inputEnhancementWidget.ui" line="597" />
+            <location filename="../../src/ui/cue01/inputEnhancementWidget.ui" line="1026" />
+            <source>LTI</source>
+            <translation type="unfinished" />
+        </message>
+        <message>
+            <location filename="../../src/ui/cue01/inputEnhancementWidget.ui" line="197" />
+            <location filename="../../src/ui/cue01/inputEnhancementWidget.ui" line="626" />
+            <location filename="../../src/ui/cue01/inputEnhancementWidget.ui" line="1055" />
+            <source>CTI</source>
+            <translation type="unfinished" />
+        </message>
+        <message>
+            <location filename="../../src/ui/cue01/inputEnhancementWidget.ui" line="227" />
+            <location filename="../../src/ui/cue01/inputEnhancementWidget.ui" line="656" />
+            <location filename="../../src/ui/cue01/inputEnhancementWidget.ui" line="1085" />
+            <source>Color Tone</source>
+            <translation>色调</translation>
+        </message>
+        <message>
+            <location filename="../../src/ui/cue01/inputEnhancementWidget.ui" line="336" />
+            <location filename="../../src/ui/cue01/inputEnhancementWidget.ui" line="437" />
+            <location filename="../../src/ui/cue01/inputEnhancementWidget.ui" line="765" />
+            <location filename="../../src/ui/cue01/inputEnhancementWidget.ui" line="863" />
+            <location filename="../../src/ui/cue01/inputEnhancementWidget.ui" line="1214" />
+            <location filename="../../src/ui/cue01/inputEnhancementWidget.ui" line="1282" />
+            <source>Horizontal</source>
+            <translation>水平</translation>
+        </message>
+        <message>
+            <location filename="../../src/ui/cue01/inputEnhancementWidget.ui" line="346" />
+            <location filename="../../src/ui/cue01/inputEnhancementWidget.ui" line="798" />
+            <location filename="../../src/ui/cue01/inputEnhancementWidget.ui" line="1194" />
+            <source>Anti Alias</source>
+            <translation>抗锯齿</translation>
+        </message>
+        <message>
+            <location filename="../../src/ui/cue01/inputEnhancementWidget.ui" line="356" />
+            <location filename="../../src/ui/cue01/inputEnhancementWidget.ui" line="447" />
+            <location filename="../../src/ui/cue01/inputEnhancementWidget.ui" line="775" />
+            <location filename="../../src/ui/cue01/inputEnhancementWidget.ui" line="853" />
+            <location filename="../../src/ui/cue01/inputEnhancementWidget.ui" line="1204" />
+            <location filename="../../src/ui/cue01/inputEnhancementWidget.ui" line="1272" />
+            <source>Vertical</source>
+            <translation>垂直</translation>
+        </message>
+        <message>
+            <location filename="../../src/ui/cue01/inputEnhancementWidget.ui" line="427" />
+            <location filename="../../src/ui/cue01/inputEnhancementWidget.ui" line="843" />
+            <location filename="../../src/ui/cue01/inputEnhancementWidget.ui" line="1292" />
+            <source>Peak Filter</source>
+            <translation>峰值滤波</translation>
+        </message>
+        <message>
+            <location filename="../../src/ui/cue01/inputEnhancementWidget.ui" line="488" />
+            <source>Background</source>
+            <translation>背景</translation>
+        </message>
+        <message>
+            <location filename="../../src/ui/cue01/inputEnhancementWidget.ui" line="917" />
+            <source>AUX</source>
+            <translation>辅助</translation>
+        </message>
+    </context>
+    <context>
+        <name>Form</name>
+        <message>
+            <location filename="../../src/ui/cue01/inputNoiseReductionWidget.ui" line="14" />
+            <source>Form</source>
+            <translation type="unfinished" />
+        </message>
+        <message>
+            <location filename="../../src/ui/cue01/inputNoiseReductionWidget.ui" line="50" />
+            <source>Foreground NR</source>
+            <translation>前景降噪</translation>
+        </message>
+        <message>
+            <location filename="../../src/ui/cue01/inputNoiseReductionWidget.ui" line="77" />
+            <location filename="../../src/ui/cue01/inputNoiseReductionWidget.ui" line="151" />
+            <location filename="../../src/ui/cue01/inputNoiseReductionWidget.ui" line="225" />
+            <source>NR Mode</source>
+            <translation>降噪模式</translation>
+        </message>
+        <message>
+            <location filename="../../src/ui/cue01/inputNoiseReductionWidget.ui" line="103" />
+            <location filename="../../src/ui/cue01/inputNoiseReductionWidget.ui" line="177" />
+            <location filename="../../src/ui/cue01/inputNoiseReductionWidget.ui" line="251" />
+            <source>NR Motion Display On</source>
+            <translation>降噪模式显示/隐藏</translation>
+        </message>
+        <message>
+            <location filename="../../src/ui/cue01/inputNoiseReductionWidget.ui" line="124" />
+            <source>Background NR</source>
+            <translation>背景降噪</translation>
+        </message>
+        <message>
+            <location filename="../../src/ui/cue01/inputNoiseReductionWidget.ui" line="198" />
+            <source>AUX NR</source>
+            <translation>辅助降噪</translation>
+        </message>
+        <message>
+            <location filename="../../src/ui/cue01/inputNoiseReductionWidget.ui" line="272" />
+            <source>BNR</source>
+            <translation type="unfinished" />
+        </message>
+        <message>
+            <location filename="../../src/ui/cue01/inputNoiseReductionWidget.ui" line="305" />
+            <source>BNR Mode</source>
+            <translation>BNR模式</translation>
+        </message>
+        <message>
+            <location filename="../../src/ui/cue01/inputNoiseReductionWidget.ui" line="343" />
+            <source>BNR Intensity</source>
+            <translation>BNR强度</translation>
+        </message>
+        <message>
+            <location filename="../../src/ui/cue01/inputNoiseReductionWidget.ui" line="370" />
+            <source>Block Coordinate</source>
+            <translation>块坐标</translation>
+        </message>
+        <message>
+            <location filename="../../src/ui/cue01/inputNoiseReductionWidget.ui" line="390" />
+            <source>X(0-7)</source>
+            <translation type="unfinished" />
+        </message>
+        <message>
+            <location filename="../../src/ui/cue01/inputNoiseReductionWidget.ui" line="413" />
+            <source>Y(0-7)</source>
+            <translation type="unfinished" />
+        </message>
+        <message>
+            <location filename="../../src/ui/cue01/inputNoiseReductionWidget.ui" line="427" />
+            <source>Block Display</source>
+            <translation>块显示</translation>
+        </message>
+        <message>
+            <location filename="../../src/ui/cue01/inputNoiseReductionWidget.ui" line="469" />
+            <source>Block Threshold</source>
+            <translation>块阈值</translation>
+        </message>
+    </context>
+    <context>
+        <name>SystemSettingWidget</name>
+        <message>
+            <location filename="../../src/view/cue01/systemSettingWidget.py" line="31" />
+            <source>Language：</source>
+            <translation>语言：</translation>
+        </message>
+        <message>
+            <location filename="../../src/view/cue01/systemSettingWidget.py" line="42" />
+            <source>Fan Setting：</source>
+            <translation>风扇：</translation>
+        </message>
+        <message>
+            <location filename="../../src/view/cue01/systemSettingWidget.py" line="53" />
+            <source>System Reset：</source>
+            <translation>系统重置：</translation>
+        </message>
+        <message>
+            <location filename="../../src/view/cue01/systemSettingWidget.py" line="59" />
+            <source>Reset</source>
+            <translation>重置</translation>
+        </message>
+        <message>
+            <location filename="../../src/view/cue01/systemSettingWidget.py" line="66" />
+            <source>MCU Version：</source>
+            <translation>单片机版本：</translation>
+        </message>
+        <message>
+            <location filename="../../src/view/cue01/systemSettingWidget.py" line="76" />
+            <source>System Version：</source>
+            <translation>系统版本：</translation>
+        </message>
+        <message>
+            <location filename="../../src/view/cue01/systemSettingWidget.py" line="86" />
+            <source>Keyboard Version：</source>
+            <translation>按键版本：</translation>
+        </message>
+        <message>
+            <location filename="../../src/view/cue01/systemSettingWidget.py" line="96" />
+            <source>Hardware Version：</source>
+            <translation>硬件版本：</translation>
+        </message>
+    </context>
+    <context>
+        <name>ChromaKeyWidget</name>
+        <message>
+            <location filename="../../src/view/cue01/chromaKeyWidget.py" line="44" />
+            <source>Video Source</source>
+            <translation>视频源</translation>
+        </message>
+        <message>
+            <location filename="../../src/view/cue01/chromaKeyWidget.py" line="77" />
+            <source>Fetch</source>
+            <translation>采样</translation>
+        </message>
+        <message>
+            <location filename="../../src/view/cue01/chromaKeyWidget.py" line="83" />
+            <source>Fetch Manually</source>
+            <translation>手动采样</translation>
+        </message>
+        <message>
+            <location filename="../../src/view/cue01/chromaKeyWidget.py" line="122" />
+            <location filename="../../src/view/cue01/chromaKeyWidget.py" line="719" />
+            <source>Red</source>
+            <translation>红</translation>
+        </message>
+        <message>
+            <location filename="../../src/view/cue01/chromaKeyWidget.py" line="142" />
+            <location filename="../../src/view/cue01/chromaKeyWidget.py" line="738" />
+            <source>Green</source>
+            <translation>绿</translation>
+        </message>
+        <message>
+            <location filename="../../src/view/cue01/chromaKeyWidget.py" line="162" />
+            <location filename="../../src/view/cue01/chromaKeyWidget.py" line="757" />
+            <source>Blue</source>
+            <translation>蓝</translation>
+        </message>
+        <message>
+            <location filename="../../src/view/cue01/chromaKeyWidget.py" line="182" />
+            <source>Angle</source>
+            <translation>角度</translation>
+        </message>
+        <message>
+            <location filename="../../src/view/cue01/chromaKeyWidget.py" line="202" />
+            <source>Tolerance</source>
+            <translation>容忍度</translation>
+        </message>
+        <message>
+            <location filename="../../src/view/cue01/chromaKeyWidget.py" line="222" />
+            <source>Softness</source>
+            <translation>柔化度</translation>
+        </message>
+        <message>
+            <location filename="../../src/view/cue01/chromaKeyWidget.py" line="290" />
+            <source>Foreground</source>
+            <translation>前景</translation>
+        </message>
+        <message>
+            <location filename="../../src/view/cue01/chromaKeyWidget.py" line="308" />
+            <location filename="../../src/view/cue01/chromaKeyWidget.py" line="492" />
+            <source>Background</source>
+            <translation>背景</translation>
+        </message>
+        <message>
+            <location filename="../../src/view/cue01/chromaKeyWidget.py" line="326" />
+            <source>Key Edge</source>
+            <translation>边缘</translation>
+        </message>
+        <message>
+            <location filename="../../src/view/cue01/chromaKeyWidget.py" line="378" />
+            <source>Clip On/Off</source>
+            <translation>开/关</translation>
+        </message>
+        <message>
+            <location filename="../../src/view/cue01/chromaKeyWidget.py" line="387" />
+            <source>Curve On/Off</source>
+            <translation>曲线 开/关</translation>
+        </message>
+        <message>
+            <location filename="../../src/view/cue01/chromaKeyWidget.py" line="396" />
+            <source>Key Clip</source>
+            <translation>限幅</translation>
+        </message>
+        <message>
+            <location filename="../../src/view/cue01/chromaKeyWidget.py" line="465" />
+            <source>Spill On/Off</source>
+            <translation>开/关</translation>
+        </message>
+        <message>
+            <location filename="../../src/view/cue01/chromaKeyWidget.py" line="474" />
+            <source>Spill Edge</source>
+            <translation>边缘溢出</translation>
+        </message>
+        <message>
+            <location filename="../../src/view/cue01/chromaKeyWidget.py" line="554" />
+            <source>Spill2 On/Off</source>
+            <translation>开/关</translation>
+        </message>
+        <message>
+            <location filename="../../src/view/cue01/chromaKeyWidget.py" line="563" />
+            <source>Spill2 Color</source>
+            <translation>溢出颜色</translation>
+        </message>
+        <message>
+            <location filename="../../src/view/cue01/chromaKeyWidget.py" line="599" />
+            <source>Spill2 Reset</source>
+            <translation>溢出重置</translation>
+        </message>
+        <message>
+            <location filename="../../src/view/cue01/chromaKeyWidget.py" line="606" />
+            <location filename="../../src/view/cue01/chromaKeyWidget.py" line="775" />
+            <location filename="../../src/view/cue01/chromaKeyWidget.py" line="782" />
+            <source>Reset</source>
+            <translation>重置</translation>
+        </message>
+        <message>
+            <location filename="../../src/view/cue01/chromaKeyWidget.py" line="662" />
+            <source>Brightness</source>
+            <translation>亮度</translation>
+        </message>
+        <message>
+            <location filename="../../src/view/cue01/chromaKeyWidget.py" line="681" />
+            <source>Contract</source>
+            <translation>对比度</translation>
+        </message>
+        <message>
+            <location filename="../../src/view/cue01/chromaKeyWidget.py" line="700" />
+            <source>Saturation</source>
+            <translation>饱和度</translation>
+        </message>
+    </context>
+    <context>
+        <name>ColorGenerationWidget</name>
+        <message>
+            <location filename="../../src/view/cue01/colorGenerationWidget.py" line="27" />
+            <source>Color1</source>
+            <translation>颜色 1</translation>
+        </message>
+        <message>
+            <location filename="../../src/view/cue01/colorGenerationWidget.py" line="30" />
+            <source>Color2</source>
+            <translation>颜色 2</translation>
+        </message>
+    </context>
+    <context>
+        <name>SystemSettingWidget</name>
+        <message>
+            <location filename="../../src/view/cue01/systemSettingWidget.py" line="30" />
+            <source>Language：</source>
+            <translation>语言：</translation>
+        </message>
+        <message>
+            <location filename="../../src/view/cue01/systemSettingWidget.py" line="41" />
+            <source>Fan Setting：</source>
+            <translation>风扇：</translation>
+        </message>
+        <message>
+            <location filename="../../src/view/cue01/systemSettingWidget.py" line="52" />
+            <source>System Reset：</source>
+            <translation>系统重置：</translation>
+        </message>
+        <message>
+            <location filename="../../src/view/cue01/systemSettingWidget.py" line="58" />
+            <source>Reset</source>
+            <translation>重置</translation>
+        </message>
+        <message>
+            <location filename="../../src/view/cue01/systemSettingWidget.py" line="65" />
+            <source>MCU Version：</source>
+            <translation>单片机版本：</translation>
+        </message>
+        <message>
+            <location filename="../../src/view/cue01/systemSettingWidget.py" line="75" />
+            <source>System Version：</source>
+            <translation>系统版本：</translation>
+        </message>
+        <message>
+            <location filename="../../src/view/cue01/systemSettingWidget.py" line="85" />
+            <source>Keyboard Version：</source>
+            <translation>按键版本：</translation>
+        </message>
+        <message>
+            <location filename="../../src/view/cue01/systemSettingWidget.py" line="95" />
+            <source>Hardware Version：</source>
+            <translation>硬件版本：</translation>
+        </message>
+    </context>
+    <context>
+        <name>Form</name>
+        <message>
+            <location filename="../../src/ui/cue01/userSetting.ui" line="14" />
+            <source>Form</source>
+            <translation type="unfinished" />
+        </message>
+        <message>
+            <location filename="../../src/ui/cue01/userSetting.ui" line="76" />
+            <source>Current User:</source>
+            <translation>当前用户:</translation>
+        </message>
+        <message>
+            <location filename="../../src/ui/cue01/userSetting.ui" line="115" />
+            <source>User List:</source>
+            <translation>用户列表:</translation>
+        </message>
+        <message>
+            <location filename="../../src/ui/cue01/userSetting.ui" line="146" />
+            <source>Switch</source>
+            <translation>切换</translation>
+        </message>
+        <message>
+            <location filename="../../src/ui/cue01/userSetting.ui" line="172" />
+            <source>Conf Operation:</source>
+            <translation>配置操作:</translation>
+        </message>
+        <message>
+            <location filename="../../src/ui/cue01/userSetting.ui" line="200" />
+            <source>Import Configuration</source>
+            <translation>导入配置</translation>
+        </message>
+        <message>
+            <location filename="../../src/ui/cue01/userSetting.ui" line="225" />
+            <source>Export Configuration</source>
+            <translation>导出配置</translation>
+        </message>
+        <message>
+            <location filename="../../src/ui/cue01/userSetting.ui" line="251" />
+            <source>User Operatioin:</source>
+            <translation>用户操作:</translation>
+        </message>
+        <message>
+            <location filename="../../src/ui/cue01/userSetting.ui" line="279" />
+            <source>Delete Current User</source>
+            <translation>删除当前用户</translation>
+        </message>
+        <message>
+            <location filename="../../src/ui/cue01/userSetting.ui" line="304" />
+            <source>Create New User</source>
+            <translation>创建新用户</translation>
+        </message>
+    </context>
+    <context>
+        <name>UserSettingWidget</name>
+        <message>
+            <location filename="../../src/view/cue01/userSettingWidget.py" line="68"/>
+            <source>tip</source>
+            <translation>提示</translation>
+        </message>
+        <message>
+            <location filename="../../src/view/cue01/userSettingWidget.py" line="68"/>
+            <source>Swithing user will reboot the device, continue?</source>
+            <translation>切换用户将重启设备，是否继续？</translation>
+        </message>
+        <message>
+            <location filename="../../src/view/cue01/userSettingWidget.py" line="84"/>
+            <source>choose config file(.config)</source>
+            <translation>选择配置文件(.config)</translation>
+        </message>
+        <message>
+            <location filename="../../src/view/cue01/userSettingWidget.py" line="105"/>
+            <source>choose export directory</source>
+            <translation>选择导出配置文件目录</translation>
+        </message>
+        <message>
+            <location filename="../../src/view/cue01/userSettingWidget.py" line="96"/>
+            <location filename="../../src/view/cue01/userSettingWidget.py" line="129"/>
+            <location filename="../../src/view/cue01/userSettingWidget.py" line="145"/>
+            <location filename="../../src/view/cue01/userSettingWidget.py" line="157"/>
+            <location filename="../../src/view/cue01/userSettingWidget.py" line="222"/>
+            <source>Warning</source>
+            <translation>警告</translation>
+        </message>
+        <message>
+            <location filename="../../src/view/cue01/userSettingWidget.py" line="96"/>
+            <source>The configuration file is empty!</source>
+            <translation>配置文件内容为空！</translation>
+        </message>
+        <message>
+            <location filename="../../src/view/cue01/userSettingWidget.py" line="122"/>
+            <location filename="../../src/view/cue01/userSettingWidget.py" line="138"/>
+            <source>Export of user configuration failed! Please check if the device is connected.</source>
+            <translation>导出用户配置失败！请检查设备是否连接。</translation>
+        </message>
+        <message>
+            <location filename="../../src/view/cue01/userSettingWidget.py" line="142"/>
+            <location filename="../../src/view/cue01/userSettingWidget.py" line="220"/>
+            <source>Info</source>
+            <translation>信息</translation>
+        </message>
+        <message>
+            <location filename="../../src/view/cue01/userSettingWidget.py" line="135"/>
+            <source>Export of user configuration successufully!</source>
+            <translation>导出用户配置成功！</translation>
+        </message>
+        <message>
+            <location filename="../../src/view/cue01/userSettingWidget.py" line="150"/>
+            <source>The number of users has reached the limit! Please delete one user and try again.</source>
+            <translation>用户数量已达上限，请删除一个用户后重新操作。</translation>
+        </message>
+        <message>
+            <location filename="../../src/view/cue01/userSettingWidget.py" line="168"/>
+            <source>Please ensure that the configuration file has been saved,
+Otherwise, the {}’s configuration will not be retrievable!
+The Device will reboot, Continue?</source>
+            <translation>请确保已保存配置文件，
+否则{} 的配置被删除后将无法找回！
+设备将重启，是否继续？</translation>
+        </message>
+        <message>
+            <location filename="../../src/view/cue01/userSettingWidget.py" line="169"/>
+            <source>warning</source>
+            <translation>警告</translation>
+        </message>
+        <message>
+            <location filename="../../src/view/cue01/userSettingWidget.py" line="176"/>
+            <source>warning</source>
+            <translation>警告</translation>
+        </message>
+        <message>
+            <location filename="../../src/view/cue01/userSettingWidget.py" line="220"/>
+            <source>Import of user configuration successufully!</source>
+            <translation>导入用户配置成功！</translation>
+        </message>
+        <message>
+            <location filename="../../src/view/cue01/userSettingWidget.py" line="222"/>
+            <source>Import of user configuration failed! Please check if the device is connected.</source>
+            <translation>导入用户配置失败！请检查设备是否连接。</translation>
+        </message>
+    </context>
+    <context>
+        <name>Form</name>
+        <message>
+            <location filename="../../src/ui/cue01/audioWidget.ui" line="14"/>
+            <source>Form</source>
+            <translation type="unfinished"></translation>
+        </message>
+        <message>
+            <location filename="../../src/ui/cue01/audioWidget.ui" line="56"/>
+            <source>PGM</source>
+            <translation type="unfinished"></translation>
+        </message>
+        <message>
+            <location filename="../../src/ui/cue01/audioWidget.ui" line="66"/>
+            <source>Volume</source>
+            <translation>音量</translation>
+        </message>
+        <message>
+            <location filename="../../src/ui/cue01/audioWidget.ui" line="97"/>
+            <source>Mute</source>
+            <translation>静音</translation>
+        </message>
+        <message>
+            <location filename="../../src/ui/cue01/audioWidget.ui" line="107"/>
+            <source>HDMI In</source>
+            <translation type="unfinished"></translation>
+        </message>
+        <message>
+            <location filename="../../src/ui/cue01/audioWidget.ui" line="114"/>
+            <source>Line-In</source>
+            <translation type="unfinished"></translation>
+        </message>
+    </context>
+    <context>
+        <name>Form</name>
+        <message>
+            <location filename="../../src/ui/cue01/sourceWidget.ui" line="14"/>
+            <source>Form</source>
+            <translation type="unfinished"></translation>
+        </message>
+        <message>
+            <location filename="../../src/ui/cue01/sourceWidget.ui" line="56"/>
+            <source>AUX Source</source>
+            <translation>辅助源</translation>
+        </message>
+        <message>
+            <location filename="../../src/ui/cue01/sourceWidget.ui" line="87"/>
+            <source>USK Matte</source>
+            <translation type="unfinished"></translation>
+        </message>
+        <message>
+            <location filename="../../src/ui/cue01/sourceWidget.ui" line="97"/>
+            <source>DSK Matte</source>
+            <translation type="unfinished"></translation>
+        </message>
+        <message>
+            <location filename="../../src/ui/cue01/sourceWidget.ui" line="107"/>
+            <source>BG Source</source>
+            <translation>背景源</translation>
+        </message>
+        <message>
+            <location filename="../../src/ui/cue01/sourceWidget.ui" line="117"/>
+            <source>Matte Source</source>
+            <translation>蒙版源</translation>
+        </message>
+        <message>
+            <location filename="../../src/ui/cue01/sourceWidget.ui" line="133"/>
+            <source>Output Format</source>
+            <translation>输出格式</translation>
+        </message>
+    </context>
+</TS>

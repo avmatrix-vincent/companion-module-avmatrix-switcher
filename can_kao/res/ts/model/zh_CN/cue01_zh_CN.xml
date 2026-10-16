@@ -1,0 +1,907 @@
+<?xml version='1.0' encoding='utf-8'?>
+<TS version="2.1">
+    <context>
+        <name>CUE01_Input_Status_Widget_Form</name>
+        <message>
+            <source>None</source>
+            <translation>无</translation>
+        </message>
+        <message>
+            <source>Foreground</source>
+            <translation>前景</translation>
+        </message>
+        <message>
+            <source>Format   </source>
+            <translation>格式  </translation>
+        </message>
+        <message>
+            <source>Bit Depth   </source>
+            <translation>位深  </translation>
+        </message>
+        <message>
+            <source>Color Space   </source>
+            <translation>色彩空间  </translation>
+        </message>
+        <message>
+            <source>Range   </source>
+            <translation>范围  </translation>
+        </message>
+        <message>
+            <source>Background</source>
+            <translation>背景</translation>
+        </message>
+        <message>
+            <source>AUX</source>
+            <translation>辅助</translation>
+        </message>
+    </context>
+    <context>
+        <name>CUE01_Luma_Key_Widget_Form</name>
+        <message>
+            <source>Luma Status</source>
+            <translation>亮度键状态</translation>
+        </message>
+        <message>
+            <source>Active</source>
+            <translation>激活中</translation>
+        </message>
+        <message>
+            <source>Inactive</source>
+            <translation>未激活</translation>
+        </message>
+        <message>
+            <source>Fill Source</source>
+            <translation>填充源</translation>
+        </message>
+        <message>
+            <source>Tolerance Curve</source>
+            <translation>容忍度曲线开关</translation>
+        </message>
+        <message>
+            <source>Tolerance Invert</source>
+            <translation>容忍度反转开关</translation>
+        </message>
+        <message>
+            <source>Tolerance</source>
+            <translation>容忍度范围</translation>
+        </message>
+        <message>
+            <source>Tolerance Unit Step</source>
+            <translation>容忍度单位步长</translation>
+        </message>
+        <message>
+            <source>Key Clip On/Off</source>
+            <translation>限幅开关</translation>
+        </message>
+        <message>
+            <source>Key Clip Curve</source>
+            <translation>限幅曲线开关</translation>
+        </message>
+        <message>
+            <source>Key Clip</source>
+            <translation>限幅范围</translation>
+        </message>
+    </context>
+    <context>
+        <name>CUE01_Network_Setting_Widget_Form</name>
+        <message>
+            <source>Subnet Mask</source>
+            <translation>子网掩码</translation>
+        </message>
+        <message>
+            <source>Gateway</source>
+            <translation>网关</translation>
+        </message>
+        <message>
+            <source>Save</source>
+            <translation>保存</translation>
+        </message>
+        <message>
+            <source>IP</source>
+            <translation type="unfinished" />
+        </message>
+        <message>
+            <source>DHCP ON/OFF</source>
+            <translation>DHCP 开/关</translation>
+        </message>
+    </context>
+    <context>
+        <name>CUE01_Output_Interface_Widget_Form</name>
+        <message>
+            <source>Output PVW</source>
+            <translation>输出 PVW</translation>
+        </message>
+        <message>
+            <source>Format</source>
+            <translation>格式</translation>
+        </message>
+        <message>
+            <source>Color Space</source>
+            <translation>色彩空间</translation>
+        </message>
+        <message>
+            <source>Range</source>
+            <translation>范围</translation>
+        </message>
+        <message>
+            <source>Output PGM MATTE</source>
+            <translation>输出 PGM MATTE</translation>
+        </message>
+        <message>
+            <source>Output PGM FULL</source>
+            <translation>输出 PGM FULL</translation>
+        </message>
+        <message>
+            <source>Output PGM</source>
+            <translation>输出 PGM</translation>
+        </message>
+        <message>
+            <source>Aux Output</source>
+            <translation>辅助输出</translation>
+        </message>
+        <message>
+            <source>Output Format</source>
+            <translation>输出格式</translation>
+        </message>
+    </context>
+    <context>
+        <name>CUE01_Reference_Input_Widget_Form</name>
+        <message>
+            <source>Reference</source>
+            <translation>外同步信号</translation>
+        </message>
+        <message>
+            <source>Format</source>
+            <translation>格式</translation>
+        </message>
+    </context>
+    <context>
+        <name>CUE01_USK_Widget_Form</name>
+        <message>
+            <source>USK PIP</source>
+            <translation>上游键 PIP</translation>
+        </message>
+        <message>
+            <source>PIP ON/OFF</source>
+            <translation>PIP 开/关</translation>
+        </message>
+        <message>
+            <source>Vertical</source>
+            <translation>纵坐标</translation>
+        </message>
+        <message>
+            <source>Horizontal</source>
+            <translation>横坐标</translation>
+        </message>
+        <message>
+            <source>Width</source>
+            <translation>宽度</translation>
+        </message>
+        <message>
+            <source>Height</source>
+            <translation>高度</translation>
+        </message>
+        <message>
+            <source>USK Mask</source>
+            <translation>上游键 遮罩</translation>
+        </message>
+        <message>
+            <source>ON/OFF</source>
+            <translation>开/关</translation>
+        </message>
+        <message>
+            <source>Top</source>
+            <translation>顶部</translation>
+        </message>
+        <message>
+            <source>Left</source>
+            <translation>左侧</translation>
+        </message>
+        <message>
+            <source>Bottom</source>
+            <translation>底部</translation>
+        </message>
+        <message>
+            <source>Right</source>
+            <translation>右侧</translation>
+        </message>
+        <message>
+            <source>USK Edge</source>
+            <translation>USK 边缘</translation>
+        </message>
+        <message>
+            <source>Stage 1</source>
+            <translation>层次 1</translation>
+        </message>
+        <message>
+            <source>OFF</source>
+            <translation>关闭</translation>
+        </message>
+        <message>
+            <source>Erode 3x3</source>
+            <translation type="unfinished" />
+        </message>
+        <message>
+            <source>Gaussian 3x3</source>
+            <translation type="unfinished" />
+        </message>
+        <message>
+            <source>Erode 5x5</source>
+            <translation type="unfinished" />
+        </message>
+        <message>
+            <source>Dilate 5x5</source>
+            <translation type="unfinished" />
+        </message>
+        <message>
+            <source>Gaussian 5x5</source>
+            <translation type="unfinished" />
+        </message>
+        <message>
+            <source>Dilate 3x3</source>
+            <translation type="unfinished" />
+        </message>
+        <message>
+            <source>Stage 2</source>
+            <translation>层次 2</translation>
+        </message>
+    </context>
+    <context>
+        <name>CUE01_System_Setting_Widget_Form</name>
+        <message>
+            <source>Language：</source>
+            <translation>语言：</translation>
+        </message>
+        <message>
+            <source>Fan Setting：</source>
+            <translation>风扇：</translation>
+        </message>
+        <message>
+            <source>System Reset：</source>
+            <translation>系统重置：</translation>
+        </message>
+        <message>
+            <source>Reset</source>
+            <translation>重置</translation>
+        </message>
+        <message>
+            <source>MCU Version：</source>
+            <translation>MCU版本：</translation>
+        </message>
+        <message>
+            <source>System Version：</source>
+            <translation>系统版本：</translation>
+        </message>
+        <message>
+            <source>Keyboard Version：</source>
+            <translation>按键版本：</translation>
+        </message>
+        <message>
+            <source>Hardware Version：</source>
+            <translation>硬件版本：</translation>
+        </message>
+        <message>
+            <source>Are you sure reset the device?</source>
+            <translation>确定要将设备恢复出厂设置吗？</translation>
+        </message>
+        <message>
+            <source>Factory Reset</source>
+            <translation>恢复出厂设置</translation>
+        </message>
+        <message>
+            <source>Yes</source>
+            <translation>确定</translation>
+        </message>
+        <message>
+            <source>No</source>
+            <translation>取消</translation>
+        </message>
+    </context>
+    <context>
+        <name>CUE01_Chroma_Key_Widget_Form</name>
+        <message>
+            <source>Fill Source</source>
+            <translation>填充源</translation>
+        </message>
+        <message>
+            <source>Chroma Status</source>
+            <translation>状态</translation>
+        </message>
+        <message>
+            <source>Inactive</source>
+            <translation>未激活</translation>
+        </message>
+        <message>
+            <source>Active</source>
+            <translation>激活中</translation>
+        </message>
+        <message>
+            <source>Chroma Key Color</source>
+            <translation>色度键色彩</translation>
+        </message>
+        <message>
+            <source>Video Source</source>
+            <translation>视频源</translation>
+        </message>
+        <message>
+            <source>Chroma Fetch</source>
+            <translation>色彩采样</translation>
+        </message>
+        <message>
+            <source>Fetch</source>
+            <translation>采样</translation>
+        </message>
+        <message>
+            <source>Fetch Manually</source>
+            <translation>手动采样</translation>
+        </message>
+        <message>
+            <source>Chroma Color Key</source>
+            <translation>色彩键</translation>
+        </message>
+        <message>
+            <source>Auto</source>
+            <translation>自动</translation>
+        </message>
+        <message>
+            <source>Red</source>
+            <translation>红</translation>
+        </message>
+        <message>
+            <source>Green</source>
+            <translation>绿</translation>
+        </message>
+        <message>
+            <source>Blue</source>
+            <translation>蓝</translation>
+        </message>
+        <message>
+            <source>Angle</source>
+            <translation>角度</translation>
+        </message>
+        <message>
+            <source>Tolerance</source>
+            <translation>容忍度</translation>
+        </message>
+        <message>
+            <source>Softness</source>
+            <translation>柔化度</translation>
+        </message>
+        <message>
+            <source>Chroma Key Setting</source>
+            <translation>键设置</translation>
+        </message>
+        <message>
+            <source>Foreground</source>
+            <translation>前景</translation>
+        </message>
+        <message>
+            <source>Background</source>
+            <translation>背景</translation>
+        </message>
+        <message>
+            <source>Key Edge</source>
+            <translation>边缘</translation>
+        </message>
+        <message>
+            <source>Chroma Key Clip</source>
+            <translation>键限幅</translation>
+        </message>
+        <message>
+            <source>Clip On/Off</source>
+            <translation>开/关</translation>
+        </message>
+        <message>
+            <source>Curve On/Off</source>
+            <translation>曲线 开/关</translation>
+        </message>
+        <message>
+            <source>Key Clip</source>
+            <translation>限幅</translation>
+        </message>
+        <message>
+            <source>Chroma Spill Correction</source>
+            <translation>溢出校正</translation>
+        </message>
+        <message>
+            <source>Spill On/Off</source>
+            <translation>开/关</translation>
+        </message>
+        <message>
+            <source>Spill Edge</source>
+            <translation>边缘溢出</translation>
+        </message>
+        <message>
+            <source>Chroma Spill Correction2</source>
+            <translation>溢出校正2</translation>
+        </message>
+        <message>
+            <source>Spill2 On/Off</source>
+            <translation>开/关</translation>
+        </message>
+        <message>
+            <source>Spill2 Color</source>
+            <translation>溢出颜色</translation>
+        </message>
+        <message>
+            <source>Spill2 Reset</source>
+            <translation>溢出重置</translation>
+        </message>
+        <message>
+            <source>Reset</source>
+            <translation>重置</translation>
+        </message>
+        <message>
+            <source>Chroma Color Adjustment</source>
+            <translation>色彩调整</translation>
+        </message>
+        <message>
+            <source>Brightness</source>
+            <translation>亮度</translation>
+        </message>
+        <message>
+            <source>Contract</source>
+            <translation>对比度</translation>
+        </message>
+        <message>
+            <source>Saturation</source>
+            <translation>饱和度</translation>
+        </message>
+        <message>
+            <source>Color1</source>
+            <translation>色彩1</translation>
+        </message>
+        <message>
+            <source>Color2</source>
+            <translation>色彩2</translation>
+        </message>
+    </context>
+    <context>
+        <name>CUE01_Color_Generation_Widget_Form</name>
+        <message>
+            <source>Color1</source>
+            <translation>色彩1</translation>
+        </message>
+        <message>
+            <source>Color2</source>
+            <translation>色彩2</translation>
+        </message>
+    </context>
+    <context>
+        <name>CUE01_DSK_Widget_Form</name>
+        <message>
+            <source>Fill Source</source>
+            <translation>填充源</translation>
+        </message>
+        <message>
+            <source>Video Source</source>
+            <translation>视频源</translation>
+        </message>
+        <message>
+            <source>DSK In</source>
+            <translation>DSK输入</translation>
+        </message>
+        <message>
+            <source>DSK Tolerance</source>
+            <translation>下游键 容忍度</translation>
+        </message>
+        <message>
+            <source>Invert</source>
+            <translation>反转</translation>
+        </message>
+        <message>
+            <source>Tolerance</source>
+            <translation>容忍度</translation>
+        </message>
+        <message>
+            <source>Unit Step</source>
+            <translation>单位步长</translation>
+        </message>
+        <message>
+            <source>DSK Clip</source>
+            <translation>下游键 限幅</translation>
+        </message>
+        <message>
+            <source>Clip ON/OFF</source>
+            <translation>限幅 开/关</translation>
+        </message>
+        <message>
+            <source>Curve ON/OFF</source>
+            <translation>曲线 开/关</translation>
+        </message>
+        <message>
+            <source>Clip</source>
+            <translation>限幅</translation>
+        </message>
+        <message>
+            <source>PGM Level</source>
+            <translation>PGM 水平</translation>
+        </message>
+        <message>
+            <source>PVW Level</source>
+            <translation>PVM 水平</translation>
+        </message>
+        <message>
+            <source>DSK PIP</source>
+            <translation>下游键 PIP</translation>
+        </message>
+        <message>
+            <source>PIP ON/OFF</source>
+            <translation>PIP 开/关</translation>
+        </message>
+        <message>
+            <source>Horizontal</source>
+            <translation>横坐标</translation>
+        </message>
+        <message>
+            <source>Vertical</source>
+            <translation>纵坐标</translation>
+        </message>
+        <message>
+            <source>Width</source>
+            <translation>宽度</translation>
+        </message>
+        <message>
+            <source>Height</source>
+            <translation>高度</translation>
+        </message>
+        <message>
+            <source>DSK Mask</source>
+            <translation>下游键 遮罩</translation>
+        </message>
+        <message>
+            <source>Mask ON/OFF</source>
+            <translation>遮罩 开/关</translation>
+        </message>
+        <message>
+            <source>Top</source>
+            <translation>顶部</translation>
+        </message>
+        <message>
+            <source>Bottom</source>
+            <translation>底部</translation>
+        </message>
+        <message>
+            <source>Left</source>
+            <translation>左侧</translation>
+        </message>
+        <message>
+            <source>Right</source>
+            <translation>右侧</translation>
+        </message>
+    </context>
+    <context>
+        <name>CUE01_Input_Enhancement_Widget_Form</name>
+        <message>
+            <source>Foreground</source>
+            <translation>前景</translation>
+        </message>
+        <message>
+            <source>Brightness</source>
+            <translation>亮度</translation>
+        </message>
+        <message>
+            <source>Contrast</source>
+            <translation>对比度</translation>
+        </message>
+        <message>
+            <source>Saturation</source>
+            <translation>饱和度</translation>
+        </message>
+        <message>
+            <source>Hue</source>
+            <translation>色相</translation>
+        </message>
+        <message>
+            <source>LTI</source>
+            <translation type="unfinished" />
+        </message>
+        <message>
+            <source>CTI</source>
+            <translation type="unfinished" />
+        </message>
+        <message>
+            <source>Color Tone</source>
+            <translation>色调</translation>
+        </message>
+        <message>
+            <source>Horizontal</source>
+            <translation>水平</translation>
+        </message>
+        <message>
+            <source>Anti Alias</source>
+            <translation>抗锯齿</translation>
+        </message>
+        <message>
+            <source>Vertical</source>
+            <translation>垂直</translation>
+        </message>
+        <message>
+            <source>Peak Filter</source>
+            <translation>峰值滤波</translation>
+        </message>
+        <message>
+            <source>Background</source>
+            <translation>背景</translation>
+        </message>
+        <message>
+            <source>AUX</source>
+            <translation>辅助</translation>
+        </message>
+    </context>
+    <context>
+        <name>CUE01_Input_Noise_Reduction_Widget_Form</name>
+        <message>
+            <source>Foreground NR</source>
+            <translation>前景降噪</translation>
+        </message>
+        <message>
+            <source>NR Mode</source>
+            <translation>降噪模式</translation>
+        </message>
+        <message>
+            <source>NR Motion Display On</source>
+            <translation>降噪模式显示/隐藏</translation>
+        </message>
+        <message>
+            <source>Background NR</source>
+            <translation>背景降噪</translation>
+        </message>
+        <message>
+            <source>AUX NR</source>
+            <translation>辅助降噪</translation>
+        </message>
+        <message>
+            <source>BNR</source>
+            <translation type="unfinished" />
+        </message>
+        <message>
+            <source>BNR Mode</source>
+            <translation>BNR模式</translation>
+        </message>
+        <message>
+            <source>BNR Intensity</source>
+            <translation>BNR强度</translation>
+        </message>
+        <message>
+            <source>Block Coordinate</source>
+            <translation>块坐标</translation>
+        </message>
+        <message>
+            <source>X(0-7)</source>
+            <translation type="unfinished" />
+        </message>
+        <message>
+            <source>Y(0-7)</source>
+            <translation type="unfinished" />
+        </message>
+        <message>
+            <source>Block Display</source>
+            <translation>块显示</translation>
+        </message>
+        <message>
+            <source>Block Threshold</source>
+            <translation>块阈值</translation>
+        </message>
+    </context>
+    <context>
+        <name>CUE01_User_Setting_Form</name>
+        <message>
+            <source>Current User:</source>
+            <translation>当前用户:</translation>
+        </message>
+        <message>
+            <source>User List:</source>
+            <translation>用户列表:</translation>
+        </message>
+        <message>
+            <source>Switch</source>
+            <translation>切换</translation>
+        </message>
+        <message>
+            <source>Conf Operation:</source>
+            <translation>配置操作:</translation>
+        </message>
+        <message>
+            <source>Import Configuration</source>
+            <translation>导入配置</translation>
+        </message>
+        <message>
+            <source>Export Configuration</source>
+            <translation>导出配置</translation>
+        </message>
+        <message>
+            <source>User Operatioin:</source>
+            <translation>用户操作:</translation>
+        </message>
+        <message>
+            <source>Delete Current User</source>
+            <translation>删除当前用户</translation>
+        </message>
+        <message>
+            <source>Delete Selected User</source>
+            <translation>删除选中的用户</translation>
+        </message>
+        <message>
+            <source>Create New User</source>
+            <translation>创建新用户</translation>
+        </message>
+    </context>
+    <context>
+        <name>CUE01_User_Setting_Widget</name>
+        <message>
+            <source>tip</source>
+            <translation>提示</translation>
+        </message>
+        <message>
+            <source>Swithing user will reboot the device, continue?</source>
+            <translation>切换用户将重启设备，是否继续？</translation>
+        </message>
+        <message>
+            <source>The user list is full!</source>
+            <translation>用户列表已满!</translation>
+        </message>
+        <message>
+            <source>choose config file(.config)</source>
+            <translation>选择配置文件(.config)</translation>
+        </message>
+        <message>
+            <source>choose export directory</source>
+            <translation>选择导出配置文件目录</translation>
+        </message>
+        <message>
+            <source>The user name is duplicated, please modify the configuration filename!</source>
+            <translation>用户名重复，请修改配置文件名!</translation>
+        </message>
+        <message>
+            <source>The configuration filename should be no more than 16 characters!</source>
+            <translation>请把配置文件名修改为不超过16个字符!</translation>
+        </message>
+        <message>
+            <source>The configuration file name only supports ASCII characters!</source>
+            <translation>配置文件名仅支持ASCII字符!</translation>
+        </message>
+        <message>
+            <source>The configuration file is error!</source>
+            <translation>配置文件错误!</translation>
+        </message>
+        <message>
+            <source>Warning</source>
+            <translation>警告</translation>
+        </message>
+        <message>
+            <source>The configuration file is empty!</source>
+            <translation>配置文件内容为空！</translation>
+        </message>
+        <message>
+            <source>Export of user configuration failed! Please check if the device is connected.</source>
+            <translation>导出用户配置失败！请检查设备是否连接。</translation>
+        </message>
+        <message>
+            <source>Info</source>
+            <translation>信息</translation>
+        </message>
+        <message>
+            <source>Export of user configuration successufully!</source>
+            <translation>导出用户配置成功！</translation>
+        </message>
+        <message>
+            <source>The number of users has reached the limit! Please delete one user and try again.</source>
+            <translation>用户数量已达上限，请删除一个用户后重新操作。</translation>
+        </message>
+        <message>
+            <source>Please ensure that the configuration file has been saved, Otherwise, the {}'s configuration will not be retrievable! The Device will reboot, Continue?</source>
+            <translation>请确保已保存配置文件，否则{} 的配置被删除后将无法找回！设备将重启，是否继续？</translation>
+        </message>
+        <message>
+            <source>Not allowed to delete the current user's configuration.</source>
+            <translation>不允许删除当前用户配置。</translation>
+        </message>
+        <message>
+            <source>Not allowed to delete the default user's configuration.</source>
+            <translation>不允许删除默认的用户配置。</translation>
+        </message>
+        <message>
+            <source>Import of user configuration successufully!</source>
+            <translation>导入用户配置成功！</translation>
+        </message>
+        <message>
+            <source>Import of user configuration failed! Please check if the device is connected.</source>
+            <translation>导入用户配置失败！请检查设备是否连接。</translation>
+        </message>
+    </context>
+    <context>
+        <name>CUE01_Audio_Form</name>
+        <message>
+            <source>PGM</source>
+            <translation type="unfinished"></translation>
+        </message>
+        <message>
+            <source>Volume</source>
+            <translation>音量</translation>
+        </message>
+        <message>
+            <source>Mute</source>
+            <translation>静音</translation>
+        </message>
+        <message>
+            <source>HDMI In</source>
+            <translation type="unfinished"></translation>
+        </message>
+        <message>
+            <source>Line-In</source>
+            <translation type="unfinished"></translation>
+        </message>
+    </context>
+    <context>
+        <name>CUE01_Source_Form</name>
+        <message>
+            <source>AUX Source</source>
+            <translation>辅助源</translation>
+        </message>
+        <message>
+            <source>USK Matte</source>
+            <translation>上游键蒙版</translation>
+        </message>
+        <message>
+            <source>DSK Matte</source>
+            <translation>下游键蒙版</translation>
+        </message>
+        <message>
+            <source>BG Source</source>
+            <translation>背景源</translation>
+        </message>
+        <message>
+            <source>Matte Source</source>
+            <translation>蒙版源</translation>
+        </message>
+        <message>
+            <source>Output Format</source>
+            <translation>输出格式</translation>
+        </message>
+        <message>
+            <source>Color1</source>
+            <translation>色彩1</translation>
+        </message>
+        <message>
+            <source>Color2</source>
+            <translation>色彩2</translation>
+        </message>
+        <message>
+            <source>Background Input</source>
+            <translation>背景输入</translation>
+        </message>
+        <message>
+            <source>PGM</source>
+            <translation>PGM输出</translation>
+        </message>
+        <message>
+            <source>PGM Clean</source>
+            <translation>Clean PGM输出</translation>
+        </message>
+        <message>
+            <source>AUX</source>
+            <translation>辅助输入</translation>
+        </message>
+        <message>
+            <source>Background</source>
+            <translation>背景输入</translation>
+        </message>
+        <message>
+            <source>Foreground</source>
+            <translation>前景输入</translation>
+        </message>
+        <message>
+            <source>DSK In</source>
+            <translation>DSK输入</translation>
+        </message>
+        <message>
+            <source>BG In</source>
+            <translation>背景输入</translation>
+        </message>
+        <message>
+            <source>FG In</source>
+            <translation>前景输入</translation>
+        </message>
+    </context>
+</TS>
