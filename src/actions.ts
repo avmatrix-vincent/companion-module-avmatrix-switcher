@@ -91,7 +91,7 @@ function registerPipActions(
 	self: ModuleInstance,
 	actions: CompanionActionDefinitions,
 	n: number,
-	commandKey: string
+	commandKey: string,
 ): void {
 	const tag = `PIP${n}`
 	// 状态（KEY / ON AIR / KEY&ON AIR / OFF 整合为一个下拉）
@@ -428,7 +428,9 @@ function registerTransitionActions(self: ModuleInstance, actions: CompanionActio
 		actions[`trans_wipe${n}`] = {
 			name: `Transition ${label}`,
 			description: `Set ${label} style (0x0020, NO.${n - 1}) and press ${label} (0x0010, Key_val=${keyVal})`,
-			options: [{ type: 'dropdown', id: 'style', label: `${label} Style (0-10)`, choices: WIPE_STYLE_CHOICES, default: 0 }],
+			options: [
+				{ type: 'dropdown', id: 'style', label: `${label} Style (0-10)`, choices: WIPE_STYLE_CHOICES, default: 0 },
+			],
 			callback: async (event) => {
 				await self.sendProtocolSet('transition', n - 1, Number(event.options.style), `${label} Style`)
 				await self.sendToDevice('KEY_PRESS', { keyVal })
@@ -769,7 +771,7 @@ export function UpdateActions(self: ModuleInstance): void {
 		if (!def) continue
 		const orig = def.callback
 		def.callback = async (event, context) => {
-			self.pendingFlashKey = flashKeyFor(id, event.options as Record<string, unknown>)
+			self.pendingFlashKey = flashKeyFor(id, event.options)
 			try {
 				return await orig(event, context)
 			} finally {

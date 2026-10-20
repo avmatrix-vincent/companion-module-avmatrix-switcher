@@ -142,7 +142,7 @@ export class ModuleInstance extends InstanceBase<ModuleConfig> {
 				mac: d.mac ?? '',
 				sn: '',
 				productType: d.productType ?? 0,
-				udpType: modelIndex !== 0xff ? modelIndex : d.udpType ?? d.productType ?? 0xff,
+				udpType: modelIndex !== 0xff ? modelIndex : (d.udpType ?? d.productType ?? 0xff),
 				protocolVer: 0,
 				lastSeen: 0,
 			}
@@ -203,10 +203,7 @@ export class ModuleInstance extends InstanceBase<ModuleConfig> {
 				this.saveConfig(this.config)
 			}
 
-			this.log(
-				'info',
-				`[Scan] Device="${target.name}" TargetIP=${target.host} (${saved.length} device(s) available)`
-			)
+			this.log('info', `[Scan] Device="${target.name}" TargetIP=${target.host} (${saved.length} device(s) available)`)
 
 			// 扫描补齐了 MAC：把最新设备信息交给当前连接，使其具备心跳条件
 			if (!targetChanged && this.comm) {
@@ -265,10 +262,7 @@ export class ModuleInstance extends InstanceBase<ModuleConfig> {
 
 			this.log('debug', `[Scan] Found ${devices.length} supported device(s):`)
 			for (const device of devices) {
-				this.log(
-					'debug',
-					`[Scan]   ${device.host} -> model="${device.model}" (${resolveDeviceModel(device.model)})`
-				)
+				this.log('debug', `[Scan]   ${device.host} -> model="${device.model}" (${resolveDeviceModel(device.model)})`)
 			}
 			return devices
 		} catch (error) {
@@ -344,7 +338,7 @@ export class ModuleInstance extends InstanceBase<ModuleConfig> {
 			connection_status: 'Connecting',
 		})
 
-		this.comm.connect()
+		void this.comm.connect()
 	}
 
 	private destroyConnection(): void {
@@ -370,10 +364,7 @@ export class ModuleInstance extends InstanceBase<ModuleConfig> {
 			return false
 		}
 		const data = buildSetData(cmd, fieldIndex, value)
-		this.log(
-			'info',
-			`[Set] ${label} -> ${value} (cmd=0x${cmd.set.toString(16).padStart(4, '0')}, field=${fieldIndex})`
-		)
+		this.log('info', `[Set] ${label} -> ${value} (cmd=0x${cmd.set.toString(16).padStart(4, '0')}, field=${fieldIndex})`)
 		const ok = await this.comm.sendCommand(cmd.set, data)
 		if (ok && this.pendingFlashKey) this.flash(this.pendingFlashKey)
 		return ok
@@ -384,7 +375,7 @@ export class ModuleInstance extends InstanceBase<ModuleConfig> {
 		this.log('debug', `Raw hex: ${data.toString('hex')}`)
 		const response = parseDeviceResponse(data.toString('ascii'), cmd, session, data)
 		this.log('debug', `Parsed response type: ${response.type}, cmd: 0x${response.cmd.toString(16).padStart(4, '0')}`)
-		
+
 		handleDeviceResponse(response, {
 			onPowerChange: (power) => {
 				this.log('info', `[Device] Power state changed: ${power ? 'ON' : 'OFF'}`)
@@ -412,7 +403,7 @@ export class ModuleInstance extends InstanceBase<ModuleConfig> {
 	private handleDeviceReport(packet: any): void {
 		this.log(
 			'info',
-			`[Report] Device report - Cmd: 0x${packet.cmd.toString(16).padStart(4, '0')}, Type: 0x${packet.type.toString(16)}, Data(${packet.data.length}B): ${packet.data.toString('hex')}`
+			`[Report] Device report - Cmd: 0x${packet.cmd.toString(16).padStart(4, '0')}, Type: 0x${packet.type.toString(16)}, Data(${packet.data.length}B): ${packet.data.toString('hex')}`,
 		)
 		// 按设备主动上报同步 PGM/PVW 当前值
 		this.syncSwitchState(packet.cmd, packet.data)
@@ -455,7 +446,7 @@ export class ModuleInstance extends InstanceBase<ModuleConfig> {
 		const bBarPos = data.readUInt16BE(8)
 		this.log(
 			'info',
-			`[Report 0x0110] PGM=${pgmVal}, PVW=${pvwVal}, WIPE=${wipeMode}, SPEED=${speedMode}, FTB=${ftbState}, Freeze=${freezeState}, T_Bar=${tBarVal}, b_bar_pos=${bBarPos}`
+			`[Report 0x0110] PGM=${pgmVal}, PVW=${pvwVal}, WIPE=${wipeMode}, SPEED=${speedMode}, FTB=${ftbState}, Freeze=${freezeState}, T_Bar=${tBarVal}, b_bar_pos=${bBarPos}`,
 		)
 
 		// 1) PGM / PVW 当前源（1~6 直接；7->PAT1, 8->PAT2）→ 同步按钮颜色
@@ -589,7 +580,7 @@ export class ModuleInstance extends InstanceBase<ModuleConfig> {
 	private applySwitchFeedback(cmd: number): void {
 		this.log(
 			'info',
-			`[Switch] PGM=${this.deviceState.pgmSource}, PVW=${this.deviceState.pvwSource} (cmd=0x${cmd.toString(16).padStart(4, '0')})`
+			`[Switch] PGM=${this.deviceState.pgmSource}, PVW=${this.deviceState.pvwSource} (cmd=0x${cmd.toString(16).padStart(4, '0')})`,
 		)
 		this.checkFeedbacks('pgm_active', 'pvw_active')
 		this.setVariableValues({
@@ -617,20 +608,20 @@ export class ModuleInstance extends InstanceBase<ModuleConfig> {
 			this.log('error', 'Communication not initialized')
 			return false
 		}
-		
+
 		const { cmd, data } = buildCommand(commandId, params)
-		
+
 		// 对于KEY_PRESS命令，根据keyVal映射到具体的按钮名称
 		let actionLabel = commandId
 		if (commandId === 'KEY_PRESS' && params?.keyVal !== undefined) {
 			const keyVal = params.keyVal as number
 			actionLabel = this.getButtonNameByKeyVal(keyVal)
 		}
-		
+
 		this.log('info', `[Action] Executing: ${actionLabel} -> Command: 0x${cmd.toString(16).padStart(4, '0')}`)
 		this.log('debug', `[Action] Data hex: ${data.toString('hex')}`)
 		const success = await this.comm.sendCommand(cmd, data)
-		
+
 		if (success) {
 			this.log('info', `[Action] ${actionLabel} sent successfully`)
 			// 乐观更新 + 执行闪烁反馈（key 由动作包裹器统一设置）
@@ -642,7 +633,7 @@ export class ModuleInstance extends InstanceBase<ModuleConfig> {
 		} else {
 			this.log('error', `[Action] Failed to send: ${actionLabel}`)
 		}
-		
+
 		return success
 	}
 

@@ -1,5 +1,5 @@
 import type { ModuleInstance } from './main.js'
-import { combineRgb, CompanionBooleanFeedbackDefinition, CompanionInputFieldDropdown } from '@companion-module/base'
+import { combineRgb, CompanionBooleanFeedbackDefinition } from '@companion-module/base'
 
 export function UpdateFeedbacks(self: ModuleInstance): void {
 	const feedbacks: Record<string, CompanionBooleanFeedbackDefinition> = {}
@@ -42,7 +42,7 @@ export function UpdateFeedbacks(self: ModuleInstance): void {
 					{ id: 0xf1, label: 'Pattern2' },
 				],
 				default: 1,
-			} as CompanionInputFieldDropdown,
+			},
 		],
 		callback: (feedback) => {
 			const state = self.getDeviceState()
@@ -74,7 +74,7 @@ export function UpdateFeedbacks(self: ModuleInstance): void {
 					{ id: 0xf1, label: 'Pattern2' },
 				],
 				default: 1,
-			} as CompanionInputFieldDropdown,
+			},
 		],
 		callback: (feedback) => {
 			const state = self.getDeviceState()
@@ -142,7 +142,7 @@ export function UpdateFeedbacks(self: ModuleInstance): void {
 					{ id: 6, label: 'DIP' },
 				],
 				default: 1,
-			} as CompanionInputFieldDropdown,
+			},
 		],
 		callback: (feedback) => {
 			return self.getDeviceState().wipeMode === Number((feedback.options as Record<string, unknown>).mode)
@@ -165,7 +165,7 @@ export function UpdateFeedbacks(self: ModuleInstance): void {
 					{ id: 3, label: 'Stream 3' },
 				],
 				default: 1,
-			} as CompanionInputFieldDropdown,
+			},
 		],
 		callback: (feedback) => {
 			const n = Number((feedback.options as Record<string, unknown>).stream)
@@ -192,7 +192,7 @@ export function UpdateFeedbacks(self: ModuleInstance): void {
 						{ id: 3, label: 'KEY&ON AIR' },
 					],
 					default: 1,
-				} as CompanionInputFieldDropdown,
+				},
 			],
 			callback: (feedback) =>
 				(self.getReportState(cmdKey)[fieldIndex] ?? -1) ===

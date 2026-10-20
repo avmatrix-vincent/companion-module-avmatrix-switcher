@@ -160,7 +160,12 @@ export const DeviceCommands: Record<string, DeviceCommand> = {
 	},
 }
 
-export function parseDeviceResponse(rawData: string, cmd?: number, session?: number, rawBuffer?: Buffer): DeviceResponse {
+export function parseDeviceResponse(
+	rawData: string,
+	cmd?: number,
+	session?: number,
+	rawBuffer?: Buffer,
+): DeviceResponse {
 	const response: DeviceResponse = {
 		raw: rawData,
 		type: 'unknown',
@@ -175,7 +180,9 @@ export function parseDeviceResponse(rawData: string, cmd?: number, session?: num
 		response.type = 'heartbeat'
 		if (rawBuffer && rawBuffer.length >= 23) {
 			const macBytes = rawBuffer.slice(16, 22)
-			const mac = Array.from(macBytes).map(b => b.toString(16).padStart(2, '0')).join(':')
+			const mac = Array.from(macBytes)
+				.map((b) => b.toString(16).padStart(2, '0'))
+				.join(':')
 			const controllable = rawBuffer[22] === 0x00
 			response.data = { mac, controllable }
 		}
@@ -218,7 +225,7 @@ export function handleDeviceResponse(
 		onError?: (error: unknown) => void
 		onHeartbeat?: (mac: string, controllable: boolean) => void
 		onCustomData?: (data: DeviceResponse) => void
-	}
+	},
 ): void {
 	switch (response.type) {
 		case 'power_on':
@@ -231,10 +238,7 @@ export function handleDeviceResponse(
 			callbacks.onStatusUpdate?.(response.data.status)
 			break
 		case 'heartbeat':
-			callbacks.onHeartbeat?.(
-				response.data.mac as string,
-				response.data.controllable as boolean
-			)
+			callbacks.onHeartbeat?.(response.data.mac as string, response.data.controllable as boolean)
 			break
 		case 'error':
 			callbacks.onError?.(response.data.error)
@@ -251,9 +255,7 @@ export function buildCommand(commandId: string, params?: Record<string, unknown>
 		return { cmd: 0x0001, data: Buffer.alloc(0) }
 	}
 
-	const data = command.buildData
-		? command.buildData(params)
-		: Buffer.alloc(0)
+	const data = command.buildData ? command.buildData(params) : Buffer.alloc(0)
 
 	return { cmd: command.cmd, data }
 }

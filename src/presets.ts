@@ -46,7 +46,7 @@ function buttonPreset(
 	actionOptions: Record<string, number>,
 	feedback?: { feedbackId: string; options: Record<string, number>; style?: Record<string, number> },
 	bgcolor: number = DARK,
-	flashKey?: string
+	flashKey?: string,
 ): CompanionButtonPresetDefinition {
 	const fbs: Array<{
 		feedbackId: string
@@ -54,7 +54,8 @@ function buttonPreset(
 		style?: Record<string, number>
 	}> = []
 	if (feedback) fbs.push(feedback)
-	if (flashKey) fbs.push({ feedbackId: 'last_action', options: { key: flashKeyFor(flashKey, actionOptions) }, style: STYLE_FLASH })
+	if (flashKey)
+		fbs.push({ feedbackId: 'last_action', options: { key: flashKeyFor(flashKey, actionOptions) }, style: STYLE_FLASH })
 	return {
 		type: 'button',
 		category,
@@ -90,7 +91,7 @@ export function UpdatePresets(self: ModuleInstance): void {
 			'set_source',
 			{ source: keyVal },
 			{ feedbackId: 'pgm_active', options: { source: keyVal }, style: STYLE_RED },
-			PGM_BG
+			PGM_BG,
 		)
 	}
 	for (const [label, keyVal] of Object.entries(PATTERN_KEY_VALUES)) {
@@ -104,7 +105,7 @@ export function UpdatePresets(self: ModuleInstance): void {
 			'set_source',
 			{ source: keyVal },
 			{ feedbackId: 'pgm_active', options: { source: disp }, style: STYLE_RED },
-			PGM_BG
+			PGM_BG,
 		)
 	}
 
@@ -118,7 +119,7 @@ export function UpdatePresets(self: ModuleInstance): void {
 			'set_source',
 			{ source: keyVal },
 			{ feedbackId: 'pvw_active', options: { source: sourceVal }, style: STYLE_GREEN },
-			PVW_BG
+			PVW_BG,
 		)
 	}
 	for (const [label, keyVal] of Object.entries(PATTERN_KEY_VALUES)) {
@@ -132,7 +133,7 @@ export function UpdatePresets(self: ModuleInstance): void {
 			'set_source',
 			{ source: keyVal },
 			{ feedbackId: 'pvw_active', options: { source: disp }, style: STYLE_GREEN },
-			PVW_BG
+			PVW_BG,
 		)
 	}
 
@@ -146,13 +147,61 @@ export function UpdatePresets(self: ModuleInstance): void {
 		fbOpts?: Record<string, number>
 		fbStyle?: Record<string, number>
 	}> = [
-		{ id: 'stream1', label: 'Stream 1', actionId: 'switch_stream', value: FUNCTION_KEY_VALUES.STREAM1, fbId: 'stream_active', fbOpts: { stream: 1 }, fbStyle: STYLE_YELLOW },
-		{ id: 'stream2', label: 'Stream 2', actionId: 'switch_stream', value: FUNCTION_KEY_VALUES.STREAM2, fbId: 'stream_active', fbOpts: { stream: 2 }, fbStyle: STYLE_YELLOW },
-		{ id: 'stream3', label: 'Stream 3', actionId: 'switch_stream', value: FUNCTION_KEY_VALUES.STREAM3, fbId: 'stream_active', fbOpts: { stream: 3 }, fbStyle: STYLE_YELLOW },
+		{
+			id: 'stream1',
+			label: 'Stream 1',
+			actionId: 'switch_stream',
+			value: FUNCTION_KEY_VALUES.STREAM1,
+			fbId: 'stream_active',
+			fbOpts: { stream: 1 },
+			fbStyle: STYLE_YELLOW,
+		},
+		{
+			id: 'stream2',
+			label: 'Stream 2',
+			actionId: 'switch_stream',
+			value: FUNCTION_KEY_VALUES.STREAM2,
+			fbId: 'stream_active',
+			fbOpts: { stream: 2 },
+			fbStyle: STYLE_YELLOW,
+		},
+		{
+			id: 'stream3',
+			label: 'Stream 3',
+			actionId: 'switch_stream',
+			value: FUNCTION_KEY_VALUES.STREAM3,
+			fbId: 'stream_active',
+			fbOpts: { stream: 3 },
+			fbStyle: STYLE_YELLOW,
+		},
 		{ id: 'cut', label: 'CUT', actionId: 'switch_transition', value: TRANSITION_KEY_VALUES.CUT },
-		{ id: 'auto', label: 'AUTO', actionId: 'switch_transition', value: TRANSITION_KEY_VALUES.AUTO, fbId: 'auto_active', fbOpts: {}, fbStyle: STYLE_RED },
-		{ id: 'ftb', label: 'FTB', actionId: 'switch_transition', value: TRANSITION_KEY_VALUES.FTB, fbId: 'ftb_active', fbOpts: {}, fbStyle: STYLE_RED },
-		{ id: 'mute', label: 'MUTE', actionId: 'switch_transition', value: FUNCTION_KEY_VALUES.MUTE, fbId: 'mute_active', fbOpts: {}, fbStyle: STYLE_RED },
+		{
+			id: 'auto',
+			label: 'AUTO',
+			actionId: 'switch_transition',
+			value: TRANSITION_KEY_VALUES.AUTO,
+			fbId: 'auto_active',
+			fbOpts: {},
+			fbStyle: STYLE_RED,
+		},
+		{
+			id: 'ftb',
+			label: 'FTB',
+			actionId: 'switch_transition',
+			value: TRANSITION_KEY_VALUES.FTB,
+			fbId: 'ftb_active',
+			fbOpts: {},
+			fbStyle: STYLE_RED,
+		},
+		{
+			id: 'mute',
+			label: 'MUTE',
+			actionId: 'switch_transition',
+			value: FUNCTION_KEY_VALUES.MUTE,
+			fbId: 'mute_active',
+			fbOpts: {},
+			fbStyle: STYLE_RED,
+		},
 	]
 	for (const b of switchButtons) {
 		presets[`switch_${b.id}`] = buttonPreset(
@@ -163,7 +212,7 @@ export function UpdatePresets(self: ModuleInstance): void {
 			{ value: b.value },
 			b.fbId ? { feedbackId: b.fbId, options: b.fbOpts ?? {}, style: b.fbStyle ?? STYLE_RED } : undefined,
 			DARK,
-			b.actionId
+			b.actionId,
 		)
 	}
 
@@ -182,28 +231,65 @@ export function UpdatePresets(self: ModuleInstance): void {
 				`[${tag}]\n——\n${label}`,
 				actionId,
 				{ status },
-				{ feedbackId: fbId, options: { status }, style }
+				{ feedbackId: fbId, options: { status }, style },
 			)
 		}
 	}
 
 	// PIP1 / PIP2 / PIP3（状态四键 + Adjust）
 	statusGroup(catPip(1), 'PIP1', 'pip1_status', 'pip1', 'pip1_status_active')
-	presets['pip1_adjust'] = buttonPreset(catPip(1), 'PIP1 Adjust', '[PIP1]\n——\nADJUST', 'pip1_adjust', { source: 1, size: 100, posx: 50, posy: 50 })
+	presets['pip1_adjust'] = buttonPreset(catPip(1), 'PIP1 Adjust', '[PIP1]\n——\nADJUST', 'pip1_adjust', {
+		source: 1,
+		size: 100,
+		posx: 50,
+		posy: 50,
+	})
 	statusGroup(catPip(2), 'PIP2', 'pip2_status', 'pip2', 'pip2_status_active')
-	presets['pip2_adjust'] = buttonPreset(catPip(2), 'PIP2 Adjust', '[PIP2]\n——\nADJUST', 'pip2_adjust', { source: 1, size: 100, posx: 50, posy: 50 })
+	presets['pip2_adjust'] = buttonPreset(catPip(2), 'PIP2 Adjust', '[PIP2]\n——\nADJUST', 'pip2_adjust', {
+		source: 1,
+		size: 100,
+		posx: 50,
+		posy: 50,
+	})
 	statusGroup(catPip(3), 'PIP3', 'pip3_status', 'pip3', 'pip3_status_active')
-	presets['pip3_adjust'] = buttonPreset(catPip(3), 'PIP3 Adjust', '[PIP3]\n——\nADJUST', 'pip3_adjust', { source: 1, size: 100, posx: 50, posy: 50 })
+	presets['pip3_adjust'] = buttonPreset(catPip(3), 'PIP3 Adjust', '[PIP3]\n——\nADJUST', 'pip3_adjust', {
+		source: 1,
+		size: 100,
+		posx: 50,
+		posy: 50,
+	})
 
 	// LUMA / CHROMA / DSK / LOGO（状态四键；各自另加 Adjust）
 	statusGroup(CAT_LUMA, 'LUMA', 'luma_status', 'luma', 'luma_status_active')
-	presets['luma_adjust'] = buttonPreset(CAT_LUMA, 'LUMA Adjust', '[LUMA]\n——\nADJUST', 'luma_adjust', { size: 100, posx: 50, posy: 50, clip: 50, gain: 50 })
+	presets['luma_adjust'] = buttonPreset(CAT_LUMA, 'LUMA Adjust', '[LUMA]\n——\nADJUST', 'luma_adjust', {
+		size: 100,
+		posx: 50,
+		posy: 50,
+		clip: 50,
+		gain: 50,
+	})
 	statusGroup(CAT_CHROMA, 'CHROMA', 'chroma_status', 'chroma', 'chroma_status_active')
-	presets['chroma_adjust'] = buttonPreset(CAT_CHROMA, 'CHROMA Adjust', '[CHROMA]\n——\nADJUST', 'chroma_adjust', { size: 100, posx: 50, posy: 50, similarity: 50, smooth: 0, spill: 0, opacity: 100, brightness: 50, contrast: 50, saturation: 50 })
+	presets['chroma_adjust'] = buttonPreset(CAT_CHROMA, 'CHROMA Adjust', '[CHROMA]\n——\nADJUST', 'chroma_adjust', {
+		size: 100,
+		posx: 50,
+		posy: 50,
+		similarity: 50,
+		smooth: 0,
+		spill: 0,
+		opacity: 100,
+		brightness: 50,
+		contrast: 50,
+		saturation: 50,
+	})
 	statusGroup(CAT_DSK, 'DSK', 'dsk_status', 'dsk', 'dsk_status_active')
 	presets['dsk_adjust'] = buttonPreset(CAT_DSK, 'DSK Adjust', '[DSK]\n——\nADJUST', 'dsk_adjust', { clip: 50, gain: 50 })
 	statusGroup(CAT_LOGO, 'LOGO', 'logo_status', 'logo', 'logo_status_active')
-	presets['logo_adjust'] = buttonPreset(CAT_LOGO, 'LOGO Adjust', '[LOGO]\n——\nADJUST', 'logo_adjust', { posx: 50, posy: 50, size: 10, opacity: 100 })
+	presets['logo_adjust'] = buttonPreset(CAT_LOGO, 'LOGO Adjust', '[LOGO]\n——\nADJUST', 'logo_adjust', {
+		posx: 50,
+		posy: 50,
+		size: 10,
+		opacity: 100,
+	})
 
 	// ===== TRANSITIONS 组（WIPE1~4 / MIX / DIP / NORMAL / INV / FLIP-FLOP） =====
 	const transButtons: Array<{
@@ -216,16 +302,100 @@ export function UpdatePresets(self: ModuleInstance): void {
 		fbOpts?: Record<string, number>
 		flashKey: string
 	}> = [
-		{ id: 'trans_wipe1', text: '[TRANS]\n——\nWIPE1', name: 'TRANS WIPE1', actionId: 'trans_wipe1', opts: { style: 0 }, fbId: 'wipe_active', fbOpts: { mode: 1 }, flashKey: 'key:27' },
-		{ id: 'trans_wipe2', text: '[TRANS]\n——\nWIPE2', name: 'TRANS WIPE2', actionId: 'trans_wipe2', opts: { style: 0 }, fbId: 'wipe_active', fbOpts: { mode: 2 }, flashKey: 'key:28' },
-		{ id: 'trans_wipe3', text: '[TRANS]\n——\nWIPE3', name: 'TRANS WIPE3', actionId: 'trans_wipe3', opts: { style: 0 }, fbId: 'wipe_active', fbOpts: { mode: 3 }, flashKey: 'key:29' },
-		{ id: 'trans_wipe4', text: '[TRANS]\n——\nWIPE4', name: 'TRANS WIPE4', actionId: 'trans_wipe4', opts: { style: 0 }, fbId: 'wipe_active', fbOpts: { mode: 4 }, flashKey: 'key:30' },
-		{ id: 'trans_mix', text: '[TRANS]\n——\nMIX', name: 'TRANS MIX', actionId: 'trans_effect', opts: { value: TRANSITION_KEY_VALUES['MIX'] }, fbId: 'wipe_active', fbOpts: { mode: 5 }, flashKey: 'key:31' },
-		{ id: 'trans_dip', text: '[TRANS]\n——\nDIP', name: 'TRANS DIP', actionId: 'trans_effect', opts: { value: TRANSITION_KEY_VALUES['DIP'] }, fbId: 'wipe_active', fbOpts: { mode: 6 }, flashKey: 'key:32' },
-		{ id: 'trans_freeze', text: '[TRANS]\n——\nFREEZE', name: 'TRANS FREEZE', actionId: 'trans_effect', opts: { value: TRANSITION_KEY_VALUES['FREEZE'] }, fbId: 'freeze_active', fbOpts: {}, flashKey: 'key:33' },
-		{ id: 'trans_normal', text: '[TRANS]\n——\nNORMAL', name: 'TRANS NORMAL', actionId: 'trans_direction', opts: { value: 0 }, flashKey: 'set:transition' },
-		{ id: 'trans_inv', text: '[TRANS]\n——\nINV', name: 'TRANS INV', actionId: 'trans_direction', opts: { value: 1 }, flashKey: 'set:transition' },
-		{ id: 'trans_flipflop', text: '[TRANS]\n——\nFLIP-FLOP', name: 'TRANS FLIP-FLOP', actionId: 'trans_direction', opts: { value: 2 }, flashKey: 'set:transition' },
+		{
+			id: 'trans_wipe1',
+			text: '[TRANS]\n——\nWIPE1',
+			name: 'TRANS WIPE1',
+			actionId: 'trans_wipe1',
+			opts: { style: 0 },
+			fbId: 'wipe_active',
+			fbOpts: { mode: 1 },
+			flashKey: 'key:27',
+		},
+		{
+			id: 'trans_wipe2',
+			text: '[TRANS]\n——\nWIPE2',
+			name: 'TRANS WIPE2',
+			actionId: 'trans_wipe2',
+			opts: { style: 0 },
+			fbId: 'wipe_active',
+			fbOpts: { mode: 2 },
+			flashKey: 'key:28',
+		},
+		{
+			id: 'trans_wipe3',
+			text: '[TRANS]\n——\nWIPE3',
+			name: 'TRANS WIPE3',
+			actionId: 'trans_wipe3',
+			opts: { style: 0 },
+			fbId: 'wipe_active',
+			fbOpts: { mode: 3 },
+			flashKey: 'key:29',
+		},
+		{
+			id: 'trans_wipe4',
+			text: '[TRANS]\n——\nWIPE4',
+			name: 'TRANS WIPE4',
+			actionId: 'trans_wipe4',
+			opts: { style: 0 },
+			fbId: 'wipe_active',
+			fbOpts: { mode: 4 },
+			flashKey: 'key:30',
+		},
+		{
+			id: 'trans_mix',
+			text: '[TRANS]\n——\nMIX',
+			name: 'TRANS MIX',
+			actionId: 'trans_effect',
+			opts: { value: TRANSITION_KEY_VALUES['MIX'] },
+			fbId: 'wipe_active',
+			fbOpts: { mode: 5 },
+			flashKey: 'key:31',
+		},
+		{
+			id: 'trans_dip',
+			text: '[TRANS]\n——\nDIP',
+			name: 'TRANS DIP',
+			actionId: 'trans_effect',
+			opts: { value: TRANSITION_KEY_VALUES['DIP'] },
+			fbId: 'wipe_active',
+			fbOpts: { mode: 6 },
+			flashKey: 'key:32',
+		},
+		{
+			id: 'trans_freeze',
+			text: '[TRANS]\n——\nFREEZE',
+			name: 'TRANS FREEZE',
+			actionId: 'trans_effect',
+			opts: { value: TRANSITION_KEY_VALUES['FREEZE'] },
+			fbId: 'freeze_active',
+			fbOpts: {},
+			flashKey: 'key:33',
+		},
+		{
+			id: 'trans_normal',
+			text: '[TRANS]\n——\nNORMAL',
+			name: 'TRANS NORMAL',
+			actionId: 'trans_direction',
+			opts: { value: 0 },
+			flashKey: 'set:transition',
+		},
+		{
+			id: 'trans_inv',
+			text: '[TRANS]\n——\nINV',
+			name: 'TRANS INV',
+			actionId: 'trans_direction',
+			opts: { value: 1 },
+			flashKey: 'set:transition',
+		},
+		{
+			id: 'trans_flipflop',
+			text: '[TRANS]\n——\nFLIP-FLOP',
+			name: 'TRANS FLIP-FLOP',
+			actionId: 'trans_direction',
+			opts: { value: 2 },
+			flashKey: 'set:transition',
+		},
 	]
 	for (const b of transButtons) {
 		presets[b.id] = buttonPreset(
@@ -234,54 +404,228 @@ export function UpdatePresets(self: ModuleInstance): void {
 			b.text,
 			b.actionId,
 			b.opts,
-			b.fbId ? { feedbackId: b.fbId, options: b.fbOpts ?? {}, style: b.fbId === 'freeze_active' ? STYLE_RED : STYLE_GREEN } : undefined,
+			b.fbId
+				? { feedbackId: b.fbId, options: b.fbOpts ?? {}, style: b.fbId === 'freeze_active' ? STYLE_RED : STYLE_GREEN }
+				: undefined,
 			DARK,
-			b.actionId
+			b.actionId,
 		)
 	}
 
 	// ===== Audio Setting 组（每个按钮只控制一个功能） =====
 	// 无通道的单键 / 单开关 / 单滑块
-	const audioSimple: Array<{ id: string; text: string; name: string; actionId: string; opts: Record<string, number> }> = [
-		{ id: 'audio_all_afv', text: '[AFV]\nAll AFV', name: 'Audio All AFV', actionId: 'audio_all_afv', opts: { value: 0 } },
-		{ id: 'audio_reset', text: '[AUDIO]\nRESET', name: 'Audio Reset', actionId: 'audio_reset', opts: {} },
-		{ id: 'audio_master_en', text: '[PGM OUT]\nENABLE', name: 'PGM OUT Enable', actionId: 'audio_master_en', opts: { value: 1 } },
-		{ id: 'audio_master_vol', text: '[PGM OUT]\nVOLUME', name: 'PGM OUT Volume', actionId: 'audio_master_vol', opts: { value: 50 } },
-		{ id: 'audio_ear_en', text: '[EAR]\nENABLE', name: 'Earphone Enable', actionId: 'audio_ear_en', opts: { value: 1 } },
-		{ id: 'audio_ear_vol', text: '[EAR]\nVOLUME', name: 'Earphone Volume', actionId: 'audio_ear_vol', opts: { value: 50 } },
-		{ id: 'audio_ear_src', text: '[EAR]\nSOURCE', name: 'Earphone Source', actionId: 'audio_ear_src', opts: { value: 0 } },
-		{ id: 'audio_line_en', text: '[LINE IN]\nENABLE', name: 'Line In Enable', actionId: 'audio_line_en', opts: { value: 1 } },
-		{ id: 'audio_line_vol', text: '[LINE IN]\nVOLUME', name: 'Line In Volume', actionId: 'audio_line_vol', opts: { value: 50 } },
-		{ id: 'audio_line_delay', text: '[LINE IN]\nDELAY', name: 'Line In Delay', actionId: 'audio_line_delay', opts: { value: 0 } },
-		{ id: 'audio_xlr_en', text: '[XLR]\nENABLE', name: 'XLR Enable', actionId: 'audio_xlr_en', opts: { value: 1 } },
-		{ id: 'audio_xlr_vol', text: '[XLR]\nVOLUME', name: 'XLR Volume', actionId: 'audio_xlr_vol', opts: { value: 50 } },
-		{ id: 'audio_xlr_delay', text: '[XLR]\nDELAY', name: 'XLR Delay', actionId: 'audio_xlr_delay', opts: { value: 0 } },
-		{ id: 'audio_mic_xlr_mode', text: '[MIC/XLR]\nMODE', name: 'MIC/XLR Mode', actionId: 'audio_mic_xlr_mode', opts: { value: 0 } },
-	]
+	const audioSimple: Array<{ id: string; text: string; name: string; actionId: string; opts: Record<string, number> }> =
+		[
+			{
+				id: 'audio_all_afv',
+				text: '[AFV]\nAll AFV',
+				name: 'Audio All AFV',
+				actionId: 'audio_all_afv',
+				opts: { value: 0 },
+			},
+			{ id: 'audio_reset', text: '[AUDIO]\nRESET', name: 'Audio Reset', actionId: 'audio_reset', opts: {} },
+			{
+				id: 'audio_master_en',
+				text: '[PGM OUT]\nENABLE',
+				name: 'PGM OUT Enable',
+				actionId: 'audio_master_en',
+				opts: { value: 1 },
+			},
+			{
+				id: 'audio_master_vol',
+				text: '[PGM OUT]\nVOLUME',
+				name: 'PGM OUT Volume',
+				actionId: 'audio_master_vol',
+				opts: { value: 50 },
+			},
+			{
+				id: 'audio_ear_en',
+				text: '[EAR]\nENABLE',
+				name: 'Earphone Enable',
+				actionId: 'audio_ear_en',
+				opts: { value: 1 },
+			},
+			{
+				id: 'audio_ear_vol',
+				text: '[EAR]\nVOLUME',
+				name: 'Earphone Volume',
+				actionId: 'audio_ear_vol',
+				opts: { value: 50 },
+			},
+			{
+				id: 'audio_ear_src',
+				text: '[EAR]\nSOURCE',
+				name: 'Earphone Source',
+				actionId: 'audio_ear_src',
+				opts: { value: 0 },
+			},
+			{
+				id: 'audio_line_en',
+				text: '[LINE IN]\nENABLE',
+				name: 'Line In Enable',
+				actionId: 'audio_line_en',
+				opts: { value: 1 },
+			},
+			{
+				id: 'audio_line_vol',
+				text: '[LINE IN]\nVOLUME',
+				name: 'Line In Volume',
+				actionId: 'audio_line_vol',
+				opts: { value: 50 },
+			},
+			{
+				id: 'audio_line_delay',
+				text: '[LINE IN]\nDELAY',
+				name: 'Line In Delay',
+				actionId: 'audio_line_delay',
+				opts: { value: 0 },
+			},
+			{ id: 'audio_xlr_en', text: '[XLR]\nENABLE', name: 'XLR Enable', actionId: 'audio_xlr_en', opts: { value: 1 } },
+			{
+				id: 'audio_xlr_vol',
+				text: '[XLR]\nVOLUME',
+				name: 'XLR Volume',
+				actionId: 'audio_xlr_vol',
+				opts: { value: 50 },
+			},
+			{
+				id: 'audio_xlr_delay',
+				text: '[XLR]\nDELAY',
+				name: 'XLR Delay',
+				actionId: 'audio_xlr_delay',
+				opts: { value: 0 },
+			},
+			{
+				id: 'audio_mic_xlr_mode',
+				text: '[MIC/XLR]\nMODE',
+				name: 'MIC/XLR Mode',
+				actionId: 'audio_mic_xlr_mode',
+				opts: { value: 0 },
+			},
+		]
 	for (const b of audioSimple) {
 		presets[b.id] = buttonPreset(CAT_AUDIO, b.name, b.text, b.actionId, b.opts, undefined, DARK, b.actionId)
 	}
 
 	// IN1~6 × (ENABLE / VOLUME / AFV / DELAY)
 	for (const n of [1, 2, 3, 4, 5, 6]) {
-		presets[`audio_in${n}_en`] = buttonPreset(CAT_AUDIO, `IN${n} Enable`, `[IN${n}]\nENABLE`, 'audio_in_en', { channel: n, value: 1 }, undefined, DARK, 'audio_in_en')
-		presets[`audio_in${n}_vol`] = buttonPreset(CAT_AUDIO, `IN${n} Volume`, `[IN${n}]\nVOLUME`, 'audio_in_vol', { channel: n, value: 50 }, undefined, DARK, 'audio_in_vol')
-		presets[`audio_in${n}_afv`] = buttonPreset(CAT_AUDIO, `IN${n} AFV`, `[IN${n}]\nAFV`, 'audio_in_afv', { channel: n, value: 0 }, undefined, DARK, 'audio_in_afv')
-		presets[`audio_in${n}_delay`] = buttonPreset(CAT_AUDIO, `IN${n} Delay`, `[IN${n}]\nDELAY`, 'audio_in_delay', { channel: n, value: 0 }, undefined, DARK, 'audio_in_delay')
+		presets[`audio_in${n}_en`] = buttonPreset(
+			CAT_AUDIO,
+			`IN${n} Enable`,
+			`[IN${n}]\nENABLE`,
+			'audio_in_en',
+			{ channel: n, value: 1 },
+			undefined,
+			DARK,
+			'audio_in_en',
+		)
+		presets[`audio_in${n}_vol`] = buttonPreset(
+			CAT_AUDIO,
+			`IN${n} Volume`,
+			`[IN${n}]\nVOLUME`,
+			'audio_in_vol',
+			{ channel: n, value: 50 },
+			undefined,
+			DARK,
+			'audio_in_vol',
+		)
+		presets[`audio_in${n}_afv`] = buttonPreset(
+			CAT_AUDIO,
+			`IN${n} AFV`,
+			`[IN${n}]\nAFV`,
+			'audio_in_afv',
+			{ channel: n, value: 0 },
+			undefined,
+			DARK,
+			'audio_in_afv',
+		)
+		presets[`audio_in${n}_delay`] = buttonPreset(
+			CAT_AUDIO,
+			`IN${n} Delay`,
+			`[IN${n}]\nDELAY`,
+			'audio_in_delay',
+			{ channel: n, value: 0 },
+			undefined,
+			DARK,
+			'audio_in_delay',
+		)
 	}
 
 	// MIC1~2 × (ENABLE / GUITAR / PRE-GAIN / VOLUME / DELAY)
 	for (const n of [1, 2]) {
-		presets[`audio_mic${n}_en`] = buttonPreset(CAT_AUDIO, `MIC${n} Enable`, `[MIC${n}]\nENABLE`, 'audio_mic_en', { channel: n, value: 1 }, undefined, DARK, 'audio_mic_en')
-		presets[`audio_mic${n}_guitar`] = buttonPreset(CAT_AUDIO, `MIC${n} Guitar`, `[MIC${n}]\nGUITAR`, 'audio_mic_guitar', { channel: n, value: 0 }, undefined, DARK, 'audio_mic_guitar')
-		presets[`audio_mic${n}_pregate`] = buttonPreset(CAT_AUDIO, `MIC${n} Pre-Gain`, `[MIC${n}]\nPRE-GAIN`, 'audio_mic_pregate', { channel: n, value: 0 }, undefined, DARK, 'audio_mic_pregate')
-		presets[`audio_mic${n}_vol`] = buttonPreset(CAT_AUDIO, `MIC${n} Volume`, `[MIC${n}]\nVOLUME`, 'audio_mic_vol', { channel: n, value: 50 }, undefined, DARK, 'audio_mic_vol')
-		presets[`audio_mic${n}_delay`] = buttonPreset(CAT_AUDIO, `MIC${n} Delay`, `[MIC${n}]\nDELAY`, 'audio_mic_delay', { channel: n, value: 0 }, undefined, DARK, 'audio_mic_delay')
+		presets[`audio_mic${n}_en`] = buttonPreset(
+			CAT_AUDIO,
+			`MIC${n} Enable`,
+			`[MIC${n}]\nENABLE`,
+			'audio_mic_en',
+			{ channel: n, value: 1 },
+			undefined,
+			DARK,
+			'audio_mic_en',
+		)
+		presets[`audio_mic${n}_guitar`] = buttonPreset(
+			CAT_AUDIO,
+			`MIC${n} Guitar`,
+			`[MIC${n}]\nGUITAR`,
+			'audio_mic_guitar',
+			{ channel: n, value: 0 },
+			undefined,
+			DARK,
+			'audio_mic_guitar',
+		)
+		presets[`audio_mic${n}_pregate`] = buttonPreset(
+			CAT_AUDIO,
+			`MIC${n} Pre-Gain`,
+			`[MIC${n}]\nPRE-GAIN`,
+			'audio_mic_pregate',
+			{ channel: n, value: 0 },
+			undefined,
+			DARK,
+			'audio_mic_pregate',
+		)
+		presets[`audio_mic${n}_vol`] = buttonPreset(
+			CAT_AUDIO,
+			`MIC${n} Volume`,
+			`[MIC${n}]\nVOLUME`,
+			'audio_mic_vol',
+			{ channel: n, value: 50 },
+			undefined,
+			DARK,
+			'audio_mic_vol',
+		)
+		presets[`audio_mic${n}_delay`] = buttonPreset(
+			CAT_AUDIO,
+			`MIC${n} Delay`,
+			`[MIC${n}]\nDELAY`,
+			'audio_mic_delay',
+			{ channel: n, value: 0 },
+			undefined,
+			DARK,
+			'audio_mic_delay',
+		)
 	}
 
 	// ===== TBAR 组（+ / -） =====
-	presets['tbar_up'] = buttonPreset(CAT_TBAR, 'T-Bar +', '+', 'tbar_move', { direction: 1, step: 10 }, undefined, DARK, 'tbar_move')
-	presets['tbar_down'] = buttonPreset(CAT_TBAR, 'T-Bar -', '-', 'tbar_move', { direction: 0, step: 10 }, undefined, DARK, 'tbar_move')
+	presets['tbar_up'] = buttonPreset(
+		CAT_TBAR,
+		'T-Bar +',
+		'+',
+		'tbar_move',
+		{ direction: 1, step: 10 },
+		undefined,
+		DARK,
+		'tbar_move',
+	)
+	presets['tbar_down'] = buttonPreset(
+		CAT_TBAR,
+		'T-Bar -',
+		'-',
+		'tbar_move',
+		{ direction: 0, step: 10 },
+		undefined,
+		DARK,
+		'tbar_move',
+	)
 	// 只显示当前值（无动作），文本绑定变量 tbar_value
 	presets['tbar_display'] = {
 		type: 'button',

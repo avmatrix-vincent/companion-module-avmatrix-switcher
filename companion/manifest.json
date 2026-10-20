@@ -1,9 +1,10 @@
 {
 	"$schema": "../node_modules/@companion-module/base/assets/manifest.schema.json",
-	"id": "szavm",
-	"name": "Switcher",
+	"type": "connection",
+	"id": "avmatrix-switcher",
+	"name": "Avmatrix Switcher",
 	"shortname": "avmatrix",
-	"description": "Avmatrix Switcher 切换台按键控制模块",
+	"description": "Control Avmatrix switchers over UDP",
 	"version": "0.0.0",
 	"license": "MIT",
 	"repository": "git+https://github.com/bitfocus/companion-module-avmatrix-switcher.git",
@@ -11,7 +12,8 @@
 	"maintainers": [
 		{
 			"name": "pjd",
-			"email": "jingde.peng@szdragon.com"
+			"email": "jingde.peng@szdragon.com",
+			"github": "avmatrix-vincent"
 		}
 	],
 	"runtime": {
@@ -20,14 +22,8 @@
 		"apiVersion": "0.0.0",
 		"entrypoint": "../dist/main.js"
 	},
-	"legacyIds": [],
+	"legacyIds": ["szavm"],
 	"manufacturer": "Avmatrix",
-	"products": ["szavm"],
-	"keywords": ["SZAVM", "Avmatrix", "Switcher"],
-	"bonjourQueries": {
-		"bonjour_host": {
-			"type": "szavm",
-			"protocol": "tcp"
-		}
-	}
+	"products": ["Avmatrix Switcher"],
+	"keywords": ["AVMatrix", "Avmatrix", "Switcher", "SHARK S6"]
 }

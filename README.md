@@ -1,4 +1,6 @@
-# companion-module-[replace with module name]
+# companion-module-avmatrix-switcher
+
+Bitfocus Companion module for Avmatrix switchers, controlled over UDP.
 
 See [HELP.md](./companion/HELP.md) and [LICENSE](./LICENSE)
 

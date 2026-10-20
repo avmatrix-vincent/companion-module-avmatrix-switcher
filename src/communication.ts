@@ -104,7 +104,7 @@ export class UDPPacker {
 		data: Buffer,
 		index: number = 0,
 		session: number = 0,
-		type: number = UDPPacker.TYPE_COMMAND
+		type: number = UDPPacker.TYPE_COMMAND,
 	): Buffer {
 		const headerLength = 25
 		const checksumLength = 2
@@ -212,7 +212,9 @@ export class UDPParser {
 		info.sn = data.slice(37, 45).toString('ascii').replace(/\0/g, '')
 
 		const macBytes = data.slice(45, 51)
-		info.mac = Array.from(macBytes).map(b => b.toString(16).padStart(2, '0')).join(':')
+		info.mac = Array.from(macBytes)
+			.map((b) => b.toString(16).padStart(2, '0'))
+			.join(':')
 
 		if (data.length >= 53) {
 			info.protocolVer = data.readUInt16BE(51)
@@ -268,7 +270,9 @@ export class CommunicationManager {
 	private heartbeatMissed = 0
 	private maxHeartbeatMissed = 3
 	private onStatusChangeCallback: ((status: InstanceStatus, message?: string) => void) | undefined
-	private onDataCallback: ((data: Buffer, host: string, port: number, cmd?: number, session?: number) => void) | undefined
+	private onDataCallback:
+		| ((data: Buffer, host: string, port: number, cmd?: number, session?: number) => void)
+		| undefined
 	private onErrorCallback: ((error: Error) => void) | undefined
 	private onLogCallback: ((level: 'info' | 'error' | 'debug', message: string) => void) | undefined
 	private reportCallback: ((packet: ParsedPacket) => void) | undefined
@@ -331,13 +335,16 @@ export class CommunicationManager {
 		try {
 			const session = this.sessionCounter++
 			const packet = UDPPacker.packCommand(cmd, data, ++this.indexCounter, session)
-			
+
 			if (this.udp) {
-				this.log('info', `[Send] Command: 0x${cmd.toString(16).padStart(4, '0')}, Session: ${session}, Length: ${packet.length} bytes`)
+				this.log(
+					'info',
+					`[Send] Command: 0x${cmd.toString(16).padStart(4, '0')}, Session: ${session}, Length: ${packet.length} bytes`,
+				)
 				// 打印发出的整包数据（hex），便于排查设备无响应的问题
 				this.log('info', `[Send] Packet hex: ${packet.toString('hex')}`)
 				this.log('debug', `[Send] Target: ${this.options.host}:${this.options.port}`)
-				this.udp.send(packet)
+				void this.udp.send(packet)
 				return true
 			}
 			return false
@@ -348,7 +355,11 @@ export class CommunicationManager {
 		}
 	}
 
-	public async sendCommandWithCallback(cmd: number, data: Buffer, callback: (response: ParsedPacket) => void): Promise<boolean> {
+	public async sendCommandWithCallback(
+		cmd: number,
+		data: Buffer,
+		callback: (response: ParsedPacket) => void,
+	): Promise<boolean> {
 		if (!this.isConnected) {
 			this.log('error', 'Not connected')
 			return false
@@ -370,7 +381,7 @@ export class CommunicationManager {
 
 		try {
 			if (this.udp) {
-				this.udp.send(packet)
+				void this.udp.send(packet)
 				this.log('info', `Sent command with callback: 0x${cmd.toString(16).padStart(4, '0')}, session: ${session}`)
 				return true
 			}
@@ -395,7 +406,7 @@ export class CommunicationManager {
 	 * 上位机使用 socket.getaddrinfo(hostname, None) 获取每个IPv4接口的IP地址
 	 * 然后为每个接口创建独立的 AvmScannerPhy，绑定到该接口IP并系统分配端口
 	 * 所有接口都向 255.255.255.255:7000 发送广播
-	 * 
+	 *
 	 * Node.js中我们使用 os.networkInterfaces() 获取接口信息
 	 * 关键：绑定到接口IP而不是0.0.0.0，这样Windows会走正确的网卡
 	 */
@@ -417,7 +428,7 @@ export class CommunicationManager {
 	 * 扫描网络发现设备
 	 * 参考上位机实现：为每个网络接口创建独立的socket，绑定到接口IP，向255.255.255.255广播
 	 */
-	public scanNetwork(): Promise<void> {
+	public async scanNetwork(): Promise<void> {
 		const scanPort = this.options.scanPort || 7000
 		const interfaceAddrs = this.getInterfaceAddresses()
 
@@ -464,8 +475,7 @@ export class CommunicationManager {
 
 				// 为每个网络接口创建独立的socket
 				const sockets: dgram.Socket[] = []
-				let discoveredCount = 0
-	
+
 				const onMessage = (msg: Buffer, rinfo: dgram.RemoteInfo) => {
 					this.log('debug', `[Scan] Discovery response from ${rinfo.address}:${rinfo.port}, size=${msg.length} bytes`)
 					this.log('debug', `[Scan] Response hex: ${msg.toString('hex')}`)
@@ -476,7 +486,10 @@ export class CommunicationManager {
 						return
 					}
 
-					this.log('debug', `[Scan] Parsed header - type: 0x${parsed.type.toString(16)}, cmd: 0x${parsed.cmd.toString(16)}, session: ${parsed.session}, dataLen: ${parsed.data.length}`)
+					this.log(
+						'debug',
+						`[Scan] Parsed header - type: 0x${parsed.type.toString(16)}, cmd: 0x${parsed.cmd.toString(16)}, session: ${parsed.session}, dataLen: ${parsed.data.length}`,
+					)
 
 					// 发现响应应该是 cmd=0xFFFF 的响应
 					if (parsed.cmd !== 0xffff) {
@@ -490,7 +503,10 @@ export class CommunicationManager {
 					this.log('debug', `[Scan]   vendor      = "${deviceInfo.vendor ?? ''}"`)
 					this.log('debug', `[Scan]   productName = "${deviceInfo.name ?? ''}"`)
 					this.log('debug', `[Scan]   model       = "${deviceInfo.model ?? ''}"`)
-					this.log('debug', `[Scan]   productType = ${deviceInfo.productType ?? 0} (${getProductTypeName(deviceInfo.productType ?? 0)})`)
+					this.log(
+						'debug',
+						`[Scan]   productType = ${deviceInfo.productType ?? 0} (${getProductTypeName(deviceInfo.productType ?? 0)})`,
+					)
 					this.log('debug', `[Scan]   sn          = "${deviceInfo.sn ?? ''}"`)
 					this.log('debug', `[Scan]   mac         = "${deviceInfo.mac ?? ''}"`)
 					this.log('debug', `[Scan]   protocolVer = ${deviceInfo.protocolVer ?? 0}`)
@@ -516,9 +532,11 @@ export class CommunicationManager {
 
 					const deviceKey = device.sn || rinfo.address
 					if (!this.discoveredDevices.has(deviceKey)) {
-						discoveredCount++
 						// 仅首次发现时打印，避免同一设备被重复响应时刷屏（看起来像重复扫描）
-						this.log('debug', `[Scan] Device discovered: host=${device.host}, model=${device.model}, name=${device.name}, sn=${device.sn}, mac=${device.mac}`)
+						this.log(
+							'debug',
+							`[Scan] Device discovered: host=${device.host}, model=${device.model}, name=${device.name}, sn=${device.sn}, mac=${device.mac}`,
+						)
 					} else {
 						this.log('debug', `[Scan] Duplicate discovery response ignored: host=${device.host}, sn=${device.sn}`)
 					}
@@ -577,7 +595,7 @@ export class CommunicationManager {
 		packet: Buffer,
 		scanPort: number,
 		broadcastTarget: string,
-		finish: () => void
+		finish: () => void,
 	): void {
 		const maxScans = 4 // 与上位机 Scanner._MAX_TIMES 一致，提高发现可靠性
 		let scanCount = 0
@@ -595,7 +613,10 @@ export class CommunicationManager {
 						this.log('error', `Scan ${currentScan}/${maxScans} failed: ${err.message}`)
 					} else {
 						const addr = sock.address()
-						this.log('debug', `Scan ${currentScan}/${maxScans} sent from ${addr.address}:${addr.port} -> ${broadcastTarget}:${scanPort}`)
+						this.log(
+							'debug',
+							`Scan ${currentScan}/${maxScans} sent from ${addr.address}:${addr.port} -> ${broadcastTarget}:${scanPort}`,
+						)
 					}
 					sentCount++
 					// 所有socket发送完毕，1秒后发下一轮
@@ -608,7 +629,10 @@ export class CommunicationManager {
 							this.log('debug', '========================================')
 							this.log('info', `[Scan] Discovery complete - Found ${this.discoveredDevices.size} device(s)`)
 							for (const [key, dev] of this.discoveredDevices) {
-								this.log('debug', `[Scan]   [${key}] model="${dev.model}" type=${getProductTypeName(dev.productType)} name="${dev.name}" at ${dev.host}:${dev.port}`)
+								this.log(
+									'debug',
+									`[Scan]   [${key}] model="${dev.model}" type=${getProductTypeName(dev.productType)} name="${dev.name}" at ${dev.host}:${dev.port}`,
+								)
 							}
 							this.log('debug', '========================================')
 
@@ -672,14 +696,14 @@ export class CommunicationManager {
 
 			this.log(
 				'info',
-				`[Heartbeat] Probe -> ${this.options.host}:${this.options.port} (${useHeartbeat ? '0xEEEE' : '0xFFFF'}), misses=${this.heartbeatMissed}`
+				`[Heartbeat] Probe -> ${this.options.host}:${this.options.port} (${useHeartbeat ? '0xEEEE' : '0xFFFF'}), misses=${this.heartbeatMissed}`,
 			)
 
 			// 设备无响应时，打印本次发送的完整报文（hex），便于排查
 			if (this.heartbeatMissed > 0) {
 				this.log(
 					'info',
-					`[Heartbeat] No response (misses=${this.heartbeatMissed}) - sent packet: ${packet.toString('hex')}`
+					`[Heartbeat] No response (misses=${this.heartbeatMissed}) - sent packet: ${packet.toString('hex')}`,
 				)
 			}
 
@@ -690,13 +714,13 @@ export class CommunicationManager {
 				const totalTimeout = this.heartbeatMissed * (this.options.heartbeatInterval || 3000)
 				this.log(
 					'error',
-					`[Heartbeat] Device ${this.options.host} not responding - ${this.heartbeatMissed} consecutive misses (~${totalTimeout}ms), marking disconnected`
+					`[Heartbeat] Device ${this.options.host} not responding - ${this.heartbeatMissed} consecutive misses (~${totalTimeout}ms), marking disconnected`,
 				)
 				this.isConnected = false
 				this.stopHeartbeat()
 				this.onStatusChangeCallback?.(
 					InstanceStatus.ConnectionFailure,
-					`No response from device after ${totalTimeout}ms`
+					`No response from device after ${totalTimeout}ms`,
 				)
 			}
 		} catch (error) {
@@ -734,7 +758,10 @@ export class CommunicationManager {
 		this.heartbeatMissed = 0
 
 		if (device) {
-			this.log('info', `[Heartbeat] Target device: model=${device.model}, mac=${device.mac || 'N/A'}, ip=${device.host}`)
+			this.log(
+				'info',
+				`[Heartbeat] Target device: model=${device.model}, mac=${device.mac || 'N/A'}, ip=${device.host}`,
+			)
 		}
 	}
 
@@ -784,30 +811,30 @@ export class CommunicationManager {
 				if (parsed.cmd === 0xeeee) {
 					const hb = UDPParser.parseHeartbeatReply(parsed.data)
 					if (hb) {
-						this.log(
-							'info',
-							`[Heartbeat] Reply - vendor="${hb.vendor}", name="${hb.productName}", mac=${hb.mac}`
-						)
+						this.log('info', `[Heartbeat] Reply - vendor="${hb.vendor}", name="${hb.productName}", mac=${hb.mac}`)
 					} else {
-						this.log(
-							'info',
-							`[Heartbeat] Reply (raw ${parsed.data.length}B): ${parsed.data.toString('hex')}`
-						)
+						this.log('info', `[Heartbeat] Reply (raw ${parsed.data.length}B): ${parsed.data.toString('hex')}`)
 					}
 				}
 
-				this.log('debug', `Type: 0x${parsed.type.toString(16)}, Cmd: 0x${parsed.cmd.toString(16)}, Session: ${parsed.session}`)
+				this.log(
+					'debug',
+					`Type: 0x${parsed.type.toString(16)}, Cmd: 0x${parsed.cmd.toString(16)}, Session: ${parsed.session}`,
+				)
 				this.log('debug', `Data length: ${parsed.data.length} bytes`)
 
-				const matchedCallback = this.callbacks.find(cb => cb.session === parsed.session && cb.cmd === parsed.cmd)
+				const matchedCallback = this.callbacks.find((cb) => cb.session === parsed.session && cb.cmd === parsed.cmd)
 				if (matchedCallback) {
 					matchedCallback.callback(data)
-					this.callbacks = this.callbacks.filter(cb => cb !== matchedCallback)
+					this.callbacks = this.callbacks.filter((cb) => cb !== matchedCallback)
 					this.log('debug', 'Callback executed and removed')
 				}
 
 				if (parsed.type === 0x02) {
-					this.log('info', `[Report] Device active report - Cmd: 0x${parsed.cmd.toString(16).padStart(4, '0')}, Session: ${parsed.session}, Data: ${parsed.data.length} bytes`)
+					this.log(
+						'info',
+						`[Report] Device active report - Cmd: 0x${parsed.cmd.toString(16).padStart(4, '0')}, Session: ${parsed.session}, Data: ${parsed.data.length} bytes`,
+					)
 					this.log('debug', `[Report] Data hex: ${parsed.data.toString('hex')}`)
 					this.reportCallback?.(parsed)
 					this.log('debug', 'Device report handled')
@@ -828,7 +855,7 @@ export class CommunicationManager {
 			this.log('error', '************************************')
 			this.onErrorCallback?.(err)
 		})
-		
+
 		this.log('info', 'UDP event listeners registered')
 	}
 

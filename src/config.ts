@@ -57,8 +57,7 @@ export function GetConfigFields(devices: DeviceChoice[], current?: ModuleConfig)
 			? devices.map((d) => ({ id: d.host, label: d.label }))
 			: [{ id: '', label: 'No supported device found' }]
 
-	const defaultDevice =
-		current?.device && choices.some((c) => c.id === current.device) ? current.device : choices[0].id
+	const defaultDevice = current?.device && choices.some((c) => c.id === current.device) ? current.device : choices[0].id
 
 	// Target IP 与所选 Device 的 IP 保持一致；用户手动改过则保留其输入
 	const defaultHost = current?.host || current?.device || devices[0]?.host || ''
