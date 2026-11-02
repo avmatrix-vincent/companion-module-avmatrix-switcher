@@ -1,6 +1,8 @@
 import { UDPHelper, InstanceStatus } from '@companion-module/base'
 import * as dgram from 'dgram'
 import * as os from 'os'
+import { getUdpModelIndex } from './devices/index.js'
+import { LOG_RAW_PACKETS } from './debug.js'
 
 export interface DeviceInfo {
 	host: string
@@ -24,31 +26,14 @@ export interface DeviceInfo {
 export const PRODUCT_TYPE_NAMES = ['Unknow', 'Switcher', 'Encoder', 'Chroma']
 
 export function getProductTypeName(productType: number): string {
-	return PRODUCT_TYPE_NAMES[productType] ?? `Unknown(${productType})`
+	// H4K 系列在类型字段直接标识具体产品（0x06/0x07=H4K PLUS，0x08=H4K）
+	const extended: Record<number, string> = { 6: 'SHARK H4K PLUS', 7: 'SHARK H4K PLUS', 8: 'SHARK H4K' }
+	return extended[productType] ?? PRODUCT_TYPE_NAMES[productType] ?? `Unknown(${productType})`
 }
 
-/**
- * 设备型号 -> 心跳报文 Dev_Type 映射
- * 与上位机 ModelPreferences.get_udp_model_index 一致。
- * 注意：心跳的 Dev_Type 不是广播发现里的 productType 字节，而是按型号查表得到。
- */
-const UDP_MODEL_INDEX_MAP: Array<{ models: string[]; index: number }> = [
-	{ models: ['VS0605'], index: 1 },
-	{ models: ['SE2017'], index: 2 },
-	{ models: ['CUE01', 'KM32-4K'], index: 3 },
-	{ models: ['HVS041E'], index: 4 },
-	{ models: ['VS0617', 'PSV0617'], index: 9 },
-]
-
-export function getUdpModelIndex(rawModel: string | undefined): number {
-	const model = (rawModel ?? '').trim().toUpperCase()
-	for (const item of UDP_MODEL_INDEX_MAP) {
-		for (const m of item.models) {
-			if (model.startsWith(m.toUpperCase())) return item.index
-		}
-	}
-	return 0xff
-}
+// 设备型号 -> 心跳报文 Dev_Type 的映射已迁移至 src/devices/profiles.ts（按产品档案维护），
+// 这里保留原有导出，避免影响既有调用方。
+export { getUdpModelIndex }
 
 /** 扫描总时长上限，超出后强制结束，避免 Promise 悬挂导致后续扫描被互斥锁卡死 */
 const SCAN_TIMEOUT_MS = 10000
@@ -245,7 +230,9 @@ export interface CommunicationOptions {
 	timeout?: number
 	scanPort?: number
 	heartbeatInterval?: number
-	onLog?: (level: 'info' | 'error' | 'debug', message: string) => void
+	/** 无心跳指令的协议族使用的探活指令（Data 为空），如 H4K 的 0x0001 */
+	probeCommand?: number
+	onLog?: (level: 'info' | 'error' | 'debug' | 'warn', message: string) => void
 }
 
 export interface DeviceCallback {
@@ -257,6 +244,8 @@ export interface DeviceCallback {
 export class CommunicationManager {
 	private udp: UDPHelper | undefined
 	private discoverySocket: dgram.Socket | undefined
+	/** 扫描期间为每个接口创建的 socket，用于 disconnect/timeout 统一回收 */
+	private scanSockets: dgram.Socket[] = []
 	private options: CommunicationOptions
 	private isConnected = false
 	private discoveredDevices: Map<string, DeviceInfo> = new Map()
@@ -274,7 +263,7 @@ export class CommunicationManager {
 		| ((data: Buffer, host: string, port: number, cmd?: number, session?: number) => void)
 		| undefined
 	private onErrorCallback: ((error: Error) => void) | undefined
-	private onLogCallback: ((level: 'info' | 'error' | 'debug', message: string) => void) | undefined
+	private onLogCallback: ((level: 'info' | 'error' | 'debug' | 'warn', message: string) => void) | undefined
 	private reportCallback: ((packet: ParsedPacket) => void) | undefined
 
 	constructor(options: CommunicationOptions) {
@@ -300,25 +289,40 @@ export class CommunicationManager {
 	}
 
 	public async connect(): Promise<void> {
-		this.log('info', '========================================')
-		this.log('info', 'Starting UDP connection to device')
-		this.log('info', `Host: ${this.options.host}`)
-		this.log('info', `Port: ${this.options.port}`)
-		this.log('info', '========================================')
+		this.log('debug', '========================================')
+		this.log('debug', 'Starting UDP connection to device')
+		this.log('debug', `Host: ${this.options.host}`)
+		this.log('debug', `Port: ${this.options.port}`)
+		this.log('debug', '========================================')
 		this.disconnect()
 		this.setupUDP()
 	}
 
 	public disconnect(): void {
-		this.log('info', 'Disconnecting from device')
+		this.log('debug', 'Disconnecting from device')
 		this.stopHeartbeat()
 		if (this.udp) {
 			this.udp.destroy()
 			this.udp = undefined
 		}
 		if (this.discoverySocket) {
-			this.discoverySocket.close()
+			try {
+				this.discoverySocket.close()
+			} catch {
+				/* ignore */
+			}
 			this.discoverySocket = undefined
+		}
+		// 回收扫描期间为每个接口创建的 socket，避免 disconnect 后仍在发送/监听
+		if (this.scanSockets.length > 0) {
+			for (const sock of this.scanSockets) {
+				try {
+					sock.close()
+				} catch {
+					/* ignore */
+				}
+			}
+			this.scanSockets = []
 		}
 		this.isConnected = false
 		this.callbacks = []
@@ -338,13 +342,15 @@ export class CommunicationManager {
 
 			if (this.udp) {
 				this.log(
-					'info',
+					'debug',
 					`[Send] Command: 0x${cmd.toString(16).padStart(4, '0')}, Session: ${session}, Length: ${packet.length} bytes`,
 				)
-				// 打印发出的整包数据（hex），便于排查设备无响应的问题
-				this.log('info', `[Send] Packet hex: ${packet.toString('hex')}`)
+				// 打印发出的整包数据（hex），仅本地调试开启（AVM_LOG_RAW_PACKETS=1）
+				if (LOG_RAW_PACKETS) this.log('debug', `[Send] Packet hex: ${packet.toString('hex')}`)
 				this.log('debug', `[Send] Target: ${this.options.host}:${this.options.port}`)
-				void this.udp.send(packet)
+				// 使用 await，令发送失败能在 try/catch 中处理，避免 Node 22 默认的
+				// unhandled rejection 直接杀死模块进程（网卡掉线 / 路由不可达时会 reject）。
+				await this.udp.send(packet)
 				return true
 			}
 			return false
@@ -381,8 +387,8 @@ export class CommunicationManager {
 
 		try {
 			if (this.udp) {
-				void this.udp.send(packet)
-				this.log('info', `Sent command with callback: 0x${cmd.toString(16).padStart(4, '0')}, session: ${session}`)
+				await this.udp.send(packet)
+				this.log('debug', `Sent command with callback: 0x${cmd.toString(16).padStart(4, '0')}, session: ${session}`)
 				return true
 			}
 			return false
@@ -460,9 +466,22 @@ export class CommunicationManager {
 			const timeoutHandle = setTimeout(() => {
 				this.log('warn', `[Scan] Discovery timed out after ${SCAN_TIMEOUT_MS}ms`)
 				if (this.discoverySocket) {
-					this.discoverySocket.close()
+					try {
+						this.discoverySocket.close()
+					} catch {
+						/* ignore */
+					}
 					this.discoverySocket = undefined
 				}
+				// 确保任何已绑定的接口 socket 在超时时也被回收，避免泄漏
+				for (const sock of this.scanSockets) {
+					try {
+						sock.close()
+					} catch {
+						/* ignore */
+					}
+				}
+				this.scanSockets = []
 				finish()
 			}, SCAN_TIMEOUT_MS)
 
@@ -471,14 +490,16 @@ export class CommunicationManager {
 				const discoverPacket = UDPPacker.packDiscover()
 				this.log('debug', `[Scan] Scan packet size: ${discoverPacket.length} bytes`)
 				this.log('debug', `[Scan] Send discovery packet (cmd=0xFFFF, data=[FF]) -> ${broadcastTarget}:${scanPort}`)
-				this.log('debug', `[Scan] Packet hex: ${discoverPacket.toString('hex')}`)
+				if (LOG_RAW_PACKETS) this.log('debug', `[Scan] Packet hex: ${discoverPacket.toString('hex')}`)
 
 				// 为每个网络接口创建独立的socket
-				const sockets: dgram.Socket[] = []
+				// 同时记到 this.scanSockets，以便 disconnect/timeout 统一回收
+				this.scanSockets = []
+				const sockets: dgram.Socket[] = this.scanSockets
 
 				const onMessage = (msg: Buffer, rinfo: dgram.RemoteInfo) => {
 					this.log('debug', `[Scan] Discovery response from ${rinfo.address}:${rinfo.port}, size=${msg.length} bytes`)
-					this.log('debug', `[Scan] Response hex: ${msg.toString('hex')}`)
+					if (LOG_RAW_PACKETS) this.log('debug', `[Scan] Response hex: ${msg.toString('hex')}`)
 
 					const parsed = UDPParser.parse(msg)
 					if (!parsed) {
@@ -515,7 +536,8 @@ export class CommunicationManager {
 						this.log('warn', '[Scan] Model field is empty, cannot map to a device list entry')
 					}
 
-					const modelIndex = getUdpModelIndex(deviceInfo.model)
+					// 型号 + 设备类型一起匹配（H4K 系 6/7/8 靠类型更可靠）
+					const modelIndex = getUdpModelIndex(deviceInfo.model, deviceInfo.productType)
 					const device: DeviceInfo = {
 						host: rinfo.address,
 						port: rinfo.port,
@@ -627,7 +649,7 @@ export class CommunicationManager {
 					if (sentCount >= sockets.length && currentScan === maxScans) {
 						setTimeout(() => {
 							this.log('debug', '========================================')
-							this.log('info', `[Scan] Discovery complete - Found ${this.discoveredDevices.size} device(s)`)
+							this.log('debug', `[Scan] Discovery complete - Found ${this.discoveredDevices.size} device(s)`)
 							for (const [key, dev] of this.discoveredDevices) {
 								this.log(
 									'debug',
@@ -637,9 +659,14 @@ export class CommunicationManager {
 							this.log('debug', '========================================')
 
 							for (const sock of sockets) {
-								sock.close()
+								try {
+									sock.close()
+								} catch {
+									/* ignore */
+								}
 							}
 							this.discoverySocket = undefined
+							this.scanSockets = []
 							finish()
 						}, 1500)
 					}
@@ -680,34 +707,47 @@ export class CommunicationManager {
 	 */
 	private async sendHeartbeat(): Promise<void> {
 		const device = this.connectedDevice
-		if (!device) {
-			this.log('debug', 'Heartbeat skipped - no target device selected')
-			return
-		}
+		// 注：manual IP 场景下 device 为 undefined，仍需按配置的 host 持续探测，
+		// 否则设备永远不会变成在线。早期这里直接 return 会造成 H2（手动 IP 永远连不上）。
 
 		try {
 			if (!this.udp) return
 
-			const useHeartbeat = isValidMac(device.mac)
-			// 参考样例：心跳 index=1、session=1 固定
-			const packet = useHeartbeat
-				? UDPPacker.packHeartbeat(device.udpType ?? 0xff, device.mac, 1, 1)
-				: UDPPacker.packCommand(0xffff, Buffer.from([0xff]), 1, 1)
-
-			this.log(
-				'info',
-				`[Heartbeat] Probe -> ${this.options.host}:${this.options.port} (${useHeartbeat ? '0xEEEE' : '0xFFFF'}), misses=${this.heartbeatMissed}`,
-			)
-
-			// 设备无响应时，打印本次发送的完整报文（hex），便于排查
-			if (this.heartbeatMissed > 0) {
-				this.log(
-					'info',
-					`[Heartbeat] No response (misses=${this.heartbeatMissed}) - sent packet: ${packet.toString('hex')}`,
-				)
+			const useHeartbeat = device !== undefined && isValidMac(device.mac)
+			const probeCommand = this.options.probeCommand
+			// 优先级：有 MAC → 0xEEEE 心跳；协议族指定探活指令 → 用该指令；否则退回 0xFFFF 发现包
+			let packet: Buffer
+			let probeLabel: string
+			if (useHeartbeat && device) {
+				// 参考样例：心跳 index=1、session=1 固定
+				packet = UDPPacker.packHeartbeat(device.udpType ?? 0xff, device.mac, 1, 1)
+				probeLabel = '0xEEEE'
+			} else if (probeCommand !== undefined) {
+				packet = UDPPacker.packCommand(probeCommand, Buffer.alloc(0), 1, 1)
+				probeLabel = `0x${probeCommand.toString(16).padStart(4, '0')}`
+			} else {
+				packet = UDPPacker.packCommand(0xffff, Buffer.from([0xff]), 1, 1)
+				probeLabel = '0xFFFF'
 			}
 
-			await this.udp.send(packet)
+			this.log(
+				'debug',
+				`[Heartbeat] Probe -> ${this.options.host}:${this.options.port} (${probeLabel}), misses=${this.heartbeatMissed}`,
+			)
+
+			// 设备无响应时记录失败次数（原始报文仅本地调试输出）
+			if (this.heartbeatMissed > 0) {
+				const raw = LOG_RAW_PACKETS ? ` - sent packet: ${packet.toString('hex')}` : ''
+				this.log('debug', `[Heartbeat] No response (misses=${this.heartbeatMissed})${raw}`)
+			}
+
+			// 发送失败（网卡掉线 / 无路由）与设备无回应一样计入 miss，
+			// 避免 M3（网络失去时连接仍为绿色）。
+			try {
+				await this.udp.send(packet)
+			} catch (sendErr) {
+				this.log('error', `Heartbeat send failed: ${(sendErr as Error).message}`)
+			}
 			this.heartbeatMissed++
 
 			if (this.heartbeatMissed >= this.maxHeartbeatMissed) {
@@ -724,7 +764,7 @@ export class CommunicationManager {
 				)
 			}
 		} catch (error) {
-			this.log('error', `Heartbeat send failed: ${(error as Error).message}`)
+			this.log('error', `Heartbeat unexpected failure: ${(error as Error).message}`)
 		}
 	}
 
@@ -770,23 +810,23 @@ export class CommunicationManager {
 	}
 
 	private setupUDP(): void {
-		this.log('info', 'Initializing UDP Helper...')
+		this.log('debug', 'Initializing UDP Helper...')
 		this.udp = new UDPHelper(this.options.host, this.options.port)
-		this.log('info', `UDP Helper created for ${this.options.host}:${this.options.port}`)
+		this.log('debug', `UDP Helper created for ${this.options.host}:${this.options.port}`)
 
 		this.udp.on('status_change', (status, message) => {
-			this.log('info', `UDP status_change - Status: ${status}, Message: ${message || 'none'}`)
+			this.log('debug', `UDP status_change - Status: ${status}, Message: ${message || 'none'}`)
 
 			if (status === InstanceStatus.Ok) {
 				// UDP 是「无连接」协议：socket 就绪只代表本机端口已绑定，
 				// 不代表设备在线。这里先报「连接中」，等设备回包
 				// （markDeviceAlive）才真正置为在线。
-				this.log('info', `Socket ready for ${this.options.host}:${this.options.port}, probing device...`)
+				this.log('debug', `Socket ready for ${this.options.host}:${this.options.port}, probing device...`)
 				this.isConnected = false
 				this.onStatusChangeCallback?.(InstanceStatus.Connecting, 'Waiting for device response...')
 				this.startHeartbeat()
 			} else {
-				this.log('info', `Connection status: ${status} - ${message}`)
+				this.log('debug', `Connection status: ${status} - ${message}`)
 				if (this.isConnected) {
 					this.log('error', 'Connection was established but now lost')
 				}
@@ -797,8 +837,9 @@ export class CommunicationManager {
 		})
 
 		this.udp.on('data', (data) => {
-			// info 级别打印收到的原始报文，便于确认设备“到底有没有上报”以及上报内容
-			this.log('info', `[Recv] ${data.length}B: ${data.toString('hex')}`)
+			// 收到报文的长度/摘要；原始 hex 仅本地调试输出（打包版不暴露数据包内容）
+			const recvRaw = LOG_RAW_PACKETS ? `: ${data.toString('hex')}` : ''
+			this.log('debug', `[Recv] ${data.length}B${recvRaw}`)
 			this.log('debug', '========== RECEIVED DATA START ==========')
 			this.log('debug', `Raw data length: ${data.length} bytes`)
 
@@ -811,9 +852,9 @@ export class CommunicationManager {
 				if (parsed.cmd === 0xeeee) {
 					const hb = UDPParser.parseHeartbeatReply(parsed.data)
 					if (hb) {
-						this.log('info', `[Heartbeat] Reply - vendor="${hb.vendor}", name="${hb.productName}", mac=${hb.mac}`)
-					} else {
-						this.log('info', `[Heartbeat] Reply (raw ${parsed.data.length}B): ${parsed.data.toString('hex')}`)
+						this.log('debug', `[Heartbeat] Reply - vendor="${hb.vendor}", name="${hb.productName}", mac=${hb.mac}`)
+					} else if (LOG_RAW_PACKETS) {
+						this.log('debug', `[Heartbeat] Reply (raw ${parsed.data.length}B): ${parsed.data.toString('hex')}`)
 					}
 				}
 
@@ -832,10 +873,10 @@ export class CommunicationManager {
 
 				if (parsed.type === 0x02) {
 					this.log(
-						'info',
+						'debug',
 						`[Report] Device active report - Cmd: 0x${parsed.cmd.toString(16).padStart(4, '0')}, Session: ${parsed.session}, Data: ${parsed.data.length} bytes`,
 					)
-					this.log('debug', `[Report] Data hex: ${parsed.data.toString('hex')}`)
+					if (LOG_RAW_PACKETS) this.log('debug', `[Report] Data hex: ${parsed.data.toString('hex')}`)
 					this.reportCallback?.(parsed)
 					this.log('debug', 'Device report handled')
 				}
@@ -856,10 +897,10 @@ export class CommunicationManager {
 			this.onErrorCallback?.(err)
 		})
 
-		this.log('info', 'UDP event listeners registered')
+		this.log('debug', 'UDP event listeners registered')
 	}
 
 	private log(level: 'info' | 'error' | 'debug' | 'warn', message: string): void {
-		this.onLogCallback?.(level === 'warn' ? 'info' : level, message)
+		this.onLogCallback?.(level, message)
 	}
 }

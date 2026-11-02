@@ -1,13 +1,31 @@
 import type { ModuleInstance } from './main.js'
-import { CompanionActionDefinitions, CompanionInputFieldNumber } from '@companion-module/base'
 import {
-	PGM_KEY_VALUES,
-	PVW_KEY_VALUES,
-	PATTERN_KEY_VALUES,
-	TRANSITION_KEY_VALUES,
-	FUNCTION_KEY_VALUES,
-	flashKeyFor,
-} from './commandHandler.js'
+	CompanionActionDefinitions,
+	CompanionInputFieldDropdown,
+	CompanionInputFieldNumber,
+} from '@companion-module/base'
+import { isIdEnabled } from './devices/index.js'
+import { flashKeyFor } from './commandHandler.js'
+
+/** Adjust 动作的选项类型（滑块 + 下拉） */
+type AdjustOption = CompanionInputFieldNumber | CompanionInputFieldDropdown
+
+/**
+ * 判断当前协议是否包含某命令的全部字段。
+ * 例：H4K 的 LUMA 没有 FillSource/Invert，依赖这些字段的动作就不注册。
+ */
+function supports(self: ModuleInstance, cmdKey: string, ...fields: string[]): boolean {
+	return fields.every((f) => self.hasField(cmdKey, f))
+}
+
+/** 当前协议的键源 / PIP 源下拉项（各协议枚举起点不同） */
+const keySourcesOf = (self: ModuleInstance) => self.getProtocolFamilyInfo().keySources
+const pipSourcesOf = (self: ModuleInstance) => self.getProtocolFamilyInfo().pipSources
+
+/** 取源下拉默认值（IN1 对应的 id） */
+function defaultSourceId(sources: Array<{ id: number; label: string }>): number {
+	return sources.find((s) => s.label === 'IN1')?.id ?? sources[0]?.id ?? 0
+}
 
 // ==================== 共用选项 ====================
 
@@ -25,41 +43,22 @@ const ONOFF_CHOICES = [
 	{ id: 0, label: 'OFF' },
 ]
 
-// Key 源的源（0-7）：0=BLACK,1~6=IN1~6,7=Color Bar
-const SOURCE_CHOICES = [
-	{ id: 0, label: 'BLACK' },
-	{ id: 1, label: 'IN1' },
-	{ id: 2, label: 'IN2' },
-	{ id: 3, label: 'IN3' },
-	{ id: 4, label: 'IN4' },
-	{ id: 5, label: 'IN5' },
-	{ id: 6, label: 'IN6' },
-	{ id: 7, label: 'Color Bar' },
-]
+// 键源 / PIP 源的下拉项由协议族提供（见 devices/protocols.ts 的 keySources / pipSources）
 
-// PIP 源（0-11）：0=BLACK,1~6=IN1~6,7=Color Bar,8=Color 1,9=Color 2,10=PAT1,11=PAT2
-const PIP_SOURCE_CHOICES = [
-	{ id: 0, label: 'BLACK' },
-	{ id: 1, label: 'IN1' },
-	{ id: 2, label: 'IN2' },
-	{ id: 3, label: 'IN3' },
-	{ id: 4, label: 'IN4' },
-	{ id: 5, label: 'IN5' },
-	{ id: 6, label: 'IN6' },
-	{ id: 7, label: 'Color Bar' },
-	{ id: 8, label: 'Color 1' },
-	{ id: 9, label: 'Color 2' },
-	{ id: 10, label: 'PAT1' },
-	{ id: 11, label: 'PAT2' },
-]
-
-// CHROMA Key Color Type（0-4）
+// CHROMA Key Color Type（0617：0-4）
 const CHROMA_KEY_TYPE_CHOICES = [
 	{ id: 0, label: 'Green' },
 	{ id: 1, label: 'Blue' },
 	{ id: 2, label: 'Red' },
 	{ id: 3, label: 'Custom' },
 	{ id: 4, label: 'Fetch' },
+]
+
+// H4K Key Color Type：只有 RED / GREEN / BLUE（0/1/2）
+const H4K_KEY_COLOR_CHOICES = [
+	{ id: 0, label: 'Red' },
+	{ id: 1, label: 'Green' },
+	{ id: 2, label: 'Blue' },
 ]
 
 // Transition Direction（0-2）
@@ -69,8 +68,7 @@ const DIRECTION_CHOICES = [
 	{ id: 2, label: 'Flip-Flop' },
 ]
 
-// Wipe 样式（0-10）
-const WIPE_STYLE_CHOICES = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10].map((n) => ({ id: n, label: `Wipe Style ${n}` }))
+// Wipe 样式下拉由协议族提供（0617：0~10；H4K：0~27，下发值 = 下拉 id，0 = 第一张图）
 
 /** 生成一个滑块(number)选项 */
 function slider(id: string, label: string, min: number, max: number, def: number): CompanionInputFieldNumber {
@@ -100,25 +98,58 @@ function registerPipActions(
 		description: `Set ${tag} status`,
 		options: [{ type: 'dropdown', id: 'status', label: 'Status', choices: STATUS_CHOICES, default: 0 }],
 		callback: async (event) => {
-			await self.sendProtocolSet(commandKey, 0, Number(event.options.status), `${tag} Status`)
+			const status = Number(event.options.status)
+			// H4K：PIP / LUMA / CHROMA 互斥，先关掉其他两层（旧族直接返回）
+			if (status >= 1) await self.closeOtherKeys(commandKey)
+			await self.sendProtocolField(commandKey, 'Status', status, `${tag} Status`)
+			if (status >= 1) self.markKeyTypeLocal(0)
 		},
 	}
-	// 参数（Source/Size/PosX/PosY 整合为一个动作）
+	// 参数（Source/Size/PosX/PosY 整合为一个动作；H4K 追加 Border 相关字段）
+	const pipAdjustOptions: AdjustOption[] = [
+		{
+			type: 'dropdown',
+			id: 'source',
+			label: 'Source',
+			choices: pipSourcesOf(self),
+			default: defaultSourceId(pipSourcesOf(self)),
+		},
+		slider('size', 'Size', 12, 100, 100),
+		slider('posx', 'PosX', 0, 100, 50),
+		slider('posy', 'PosY', 0, 100, 50),
+	]
+	if (supports(self, commandKey, 'BorderEnable')) pipAdjustOptions.push(onoff('borderEnable', 'Border Enable'))
+	if (supports(self, commandKey, 'BorderColor')) pipAdjustOptions.push(slider('borderColor', 'Border Color', 0, 100, 0))
+	if (supports(self, commandKey, 'BorderWidth')) pipAdjustOptions.push(slider('borderWidth', 'Border Width', 0, 100, 0))
 	actions[`pip${n}_adjust`] = {
 		name: `${tag} Adjust`,
-		description: `${tag} Source / Size / PosX / PosY`,
-		options: [
-			{ type: 'dropdown', id: 'source', label: 'Source', choices: PIP_SOURCE_CHOICES, default: 1 },
-			slider('size', 'Size', 12, 100, 100),
-			slider('posx', 'PosX', 0, 100, 50),
-			slider('posy', 'PosY', 0, 100, 50),
-		],
+		description: `${tag} Source / Size / PosX / PosY / Border`,
+		options: pipAdjustOptions,
 		callback: async (event) => {
 			const o = event.options
-			await self.sendProtocolSet(commandKey, 1, Number(o.source), `${tag} Source`)
-			await self.sendProtocolSet(commandKey, 2, Number(o.size), `${tag} Size`)
-			await self.sendProtocolSet(commandKey, 3, Number(o.posx), `${tag} PosX`)
-			await self.sendProtocolSet(commandKey, 4, Number(o.posy), `${tag} PosY`)
+			await self.sendProtocolField(commandKey, 'Source', Number(o.source), `${tag} Source`)
+			await self.sendProtocolField(commandKey, 'Size', Number(o.size), `${tag} Size`)
+			await self.sendProtocolField(commandKey, 'PosX', Number(o.posx), `${tag} PosX`)
+			await self.sendProtocolField(commandKey, 'PosY', Number(o.posy), `${tag} PosY`)
+			// H4K Border 字段（0617 无这些字段，会自动跳过）；旧按钮遗留的 -1 按 0 处理
+			await self.sendProtocolField(
+				commandKey,
+				'BorderEnable',
+				Math.max(0, Number(o.borderEnable ?? 0)),
+				`${tag} Border Enable`,
+			)
+			await self.sendProtocolField(
+				commandKey,
+				'BorderColor',
+				Math.max(0, Number(o.borderColor ?? 0)),
+				`${tag} Border Color`,
+			)
+			await self.sendProtocolField(
+				commandKey,
+				'BorderWidth',
+				Math.max(0, Number(o.borderWidth ?? 0)),
+				`${tag} Border Width`,
+			)
 		},
 	}
 }
@@ -135,69 +166,164 @@ function registerLumaActions(self: ModuleInstance, actions: CompanionActionDefin
 		description: 'Set LUMA status',
 		options: [{ type: 'dropdown', id: 'status', label: 'Status', choices: STATUS_CHOICES, default: 0 }],
 		callback: async (event) => {
-			await self.sendProtocolSet('luma', 1, Number(event.options.status), 'LUMA Status')
+			const status = Number(event.options.status)
+			// H4K：PIP / LUMA / CHROMA 互斥，先关掉其他两层（旧族直接返回）
+			if (status >= 1) await self.closeOtherKeys('luma')
+			await self.sendProtocolField('luma', 'Status', status, 'LUMA Status')
+			if (status >= 1) self.markKeyTypeLocal(1)
 		},
 	}
-	actions['luma_fill_source'] = {
-		name: 'LUMA Fill Source',
-		description: 'LUMA Fill Source (0-7)',
-		options: [{ type: 'dropdown', id: 'value', label: 'Source', choices: SOURCE_CHOICES, default: 1 }],
-		callback: async (event) => {
-			await self.sendProtocolSet('luma', 2, Number(event.options.value), 'LUMA Fill Source')
-		},
+	if (supports(self, 'luma', 'FillSource')) {
+		actions['luma_fill_source'] = {
+			name: 'LUMA Fill Source',
+			description: 'LUMA Fill Source (0-7)',
+			options: [
+				{
+					type: 'dropdown',
+					id: 'value',
+					label: 'Source',
+					choices: keySourcesOf(self),
+					default: defaultSourceId(keySourcesOf(self)),
+				},
+			],
+			callback: async (event) => {
+				await self.sendProtocolField('luma', 'FillSource', Number(event.options.value), 'LUMA Fill Source')
+			},
+		}
 	}
 	actions['luma_key_source'] = {
 		name: 'LUMA Key Source',
 		description: 'LUMA Key Source (0-7)',
-		options: [{ type: 'dropdown', id: 'value', label: 'Source', choices: SOURCE_CHOICES, default: 1 }],
-		callback: async (event) => {
-			await self.sendProtocolSet('luma', 3, Number(event.options.value), 'LUMA Key Source')
-		},
-	}
-	actions['luma_adjust'] = {
-		name: 'LUMA Adjust',
-		description: 'LUMA Zoom Size / Key PosX / Key PosY / Clip / Gain',
 		options: [
-			slider('size', 'Zoom Size', 12, 100, 100),
-			slider('posx', 'Key PositionX', 0, 100, 50),
-			slider('posy', 'Key PositionY', 0, 100, 50),
-			slider('clip', 'Clip', 0, 100, 50),
-			slider('gain', 'Gain', 0, 100, 50),
+			{
+				type: 'dropdown',
+				id: 'value',
+				label: 'Source',
+				choices: keySourcesOf(self),
+				default: defaultSourceId(keySourcesOf(self)),
+			},
 		],
 		callback: async (event) => {
-			const o = event.options
-			await self.sendProtocolSet('luma', 4, Number(o.size), 'LUMA Zoom Size')
-			await self.sendProtocolSet('luma', 5, Number(o.posx), 'LUMA Key PositionX')
-			await self.sendProtocolSet('luma', 6, Number(o.posy), 'LUMA Key PositionY')
-			await self.sendProtocolSet('luma', 7, Number(o.clip), 'LUMA Clip')
-			await self.sendProtocolSet('luma', 8, Number(o.gain), 'LUMA Gain')
+			await self.sendProtocolField('luma', 'KeySource', Number(event.options.value), 'LUMA Key Source')
 		},
 	}
-	actions['luma_invert'] = {
-		name: 'LUMA Invert Key',
-		description: 'LUMA Invert Key (0:OFF / 1:ON)',
-		options: [onoff('value', 'State')],
+	// 参数选项按协议字段动态拼装（例：H4K 无 Gain；H4K 有 Tolerance/Clip 范围）
+	// H4K 的 Clip / Tolerance 是枚举（不是 0-100 数值），且有 Mask 0~100%
+	const isH4K = !!self.getProtocolCommands()['keyType']
+	const lumaAdjustOptions: AdjustOption[] = []
+	if (supports(self, 'luma', 'Size')) lumaAdjustOptions.push(slider('size', 'Zoom Size', 12, 100, 100))
+	if (supports(self, 'luma', 'PosX')) lumaAdjustOptions.push(slider('posx', 'Key PositionX', 0, 100, 50))
+	if (supports(self, 'luma', 'PosY')) lumaAdjustOptions.push(slider('posy', 'Key PositionY', 0, 100, 50))
+	if (supports(self, 'luma', 'Clip')) {
+		if (isH4K) {
+			lumaAdjustOptions.push({
+				type: 'dropdown',
+				id: 'clip',
+				label: 'Clip',
+				choices: [
+					{ id: 0, label: 'Off' },
+					{ id: 1, label: 'On' },
+					{ id: 2, label: 'Curve' },
+				],
+				default: 0,
+			})
+		} else {
+			lumaAdjustOptions.push(slider('clip', 'Clip', 0, 100, 50))
+		}
+	}
+	if (supports(self, 'luma', 'Gain')) lumaAdjustOptions.push(slider('gain', 'Gain', 0, 100, 50))
+	// H4K 字段
+	if (supports(self, 'luma', 'Tolerance')) {
+		lumaAdjustOptions.push({
+			type: 'dropdown',
+			id: 'tolerance',
+			label: 'Tolerance',
+			choices: [
+				{ id: 0, label: 'Default' },
+				{ id: 1, label: 'Curve' },
+				{ id: 2, label: 'Invert' },
+				{ id: 3, label: 'Curve and Invert' },
+			],
+			default: 0,
+		})
+	}
+	if (supports(self, 'luma', 'ToleranceMin')) lumaAdjustOptions.push(slider('toleranceMin', 'Tolerance Min', 0, 100, 0))
+	if (supports(self, 'luma', 'ToleranceMax'))
+		lumaAdjustOptions.push(slider('toleranceMax', 'Tolerance Max', 0, 100, 100))
+	if (supports(self, 'luma', 'ClipMin')) lumaAdjustOptions.push(slider('clipMin', 'Clip Min', 0, 100, 0))
+	if (supports(self, 'luma', 'ClipMax')) lumaAdjustOptions.push(slider('clipMax', 'Clip Max', 0, 100, 100))
+	// H4K 的 Mask 每个边都是 0~100%
+	if (isH4K && supports(self, 'luma', 'MaskEnable')) lumaAdjustOptions.push(onoff('maskEnable', 'Mask Enable', 0))
+	if (isH4K && supports(self, 'luma', 'MaskLeft')) lumaAdjustOptions.push(slider('maskLeft', 'Mask Left', 0, 100, 0))
+	if (isH4K && supports(self, 'luma', 'MaskTop')) lumaAdjustOptions.push(slider('maskTop', 'Mask Top', 0, 100, 0))
+	if (isH4K && supports(self, 'luma', 'MaskRight'))
+		lumaAdjustOptions.push(slider('maskRight', 'Mask Right', 0, 100, 100))
+	if (isH4K && supports(self, 'luma', 'MaskBottom'))
+		lumaAdjustOptions.push(slider('maskBottom', 'Mask Bottom', 0, 100, 100))
+	actions['luma_adjust'] = {
+		name: 'LUMA Adjust',
+		description: 'LUMA Zoom Size / Key PosX / Key PosY / Clip / Gain / Tolerance / Clip Range / Mask',
+		options: lumaAdjustOptions,
 		callback: async (event) => {
-			await self.sendProtocolSet('luma', 9, Number(event.options.value), 'LUMA Invert Key')
+			const o = event.options
+			await self.sendProtocolField('luma', 'Size', Number(o.size), 'LUMA Zoom Size')
+			await self.sendProtocolField('luma', 'PosX', Number(o.posx), 'LUMA Key PositionX')
+			await self.sendProtocolField('luma', 'PosY', Number(o.posy), 'LUMA Key PositionY')
+			// H4K 字段（0617 无这些字段，会自动跳过）；旧按钮遗留的 -1 按 0 处理
+			const extras: Array<[string, string]> = [
+				['tolerance', 'Tolerance'],
+				['toleranceMin', 'ToleranceMin'],
+				['toleranceMax', 'ToleranceMax'],
+				['clipMin', 'ClipMin'],
+				['clipMax', 'ClipMax'],
+				['maskEnable', 'MaskEnable'],
+				['maskLeft', 'MaskLeft'],
+				['maskTop', 'MaskTop'],
+				['maskRight', 'MaskRight'],
+				['maskBottom', 'MaskBottom'],
+			]
+			for (const [opt, field] of extras) {
+				if (o[opt] === undefined) continue
+				await self.sendProtocolField('luma', field, Math.max(0, Number(o[opt])), `LUMA ${field}`)
+			}
+			await self.sendProtocolField('luma', 'Clip', Math.max(0, Number(o.clip ?? 0)), 'LUMA Clip')
+			if (o.gain !== undefined) {
+				await self.sendProtocolField('luma', 'Gain', Number(o.gain), 'LUMA Gain')
+			}
 		},
+	}
+	if (supports(self, 'luma', 'Invert')) {
+		actions['luma_invert'] = {
+			name: 'LUMA Invert Key',
+			description: 'LUMA Invert Key (0:OFF / 1:ON)',
+			options: [onoff('value', 'State')],
+			callback: async (event) => {
+				await self.sendProtocolField('luma', 'Invert', Number(event.options.value), 'LUMA Invert Key')
+			},
+		}
 	}
 	actions['luma_mask'] = {
 		name: 'LUMA Mask',
-		description: 'LUMA Mask enable + Left/Top/Right/Bottom',
+		description: 'LUMA Mask enable + Left/Top/Right/Bottom (0~100%，左侧不能大于右侧)',
 		options: [
 			onoff('enable', 'Enable'),
-			slider('left', 'Mask Left', 0, 50, 0),
-			slider('top', 'Mask Top', 0, 50, 0),
-			slider('right', 'Mask Right', 50, 100, 100),
-			slider('bottom', 'Mask Bottom', 50, 100, 100),
+			slider('left', 'Mask Left', 0, isH4K ? 100 : 50, 0),
+			slider('top', 'Mask Top', 0, isH4K ? 100 : 50, 0),
+			slider('right', 'Mask Right', isH4K ? 0 : 50, 100, 100),
+			slider('bottom', 'Mask Bottom', isH4K ? 0 : 50, 100, 100),
 		],
 		callback: async (event) => {
 			const o = event.options
-			await self.sendProtocolSet('luma', 10, Number(o.enable), 'LUMA Mask Enable')
-			await self.sendProtocolSet('luma', 11, Number(o.left), 'LUMA Mask Left')
-			await self.sendProtocolSet('luma', 12, Number(o.top), 'LUMA Mask Top')
-			await self.sendProtocolSet('luma', 13, Number(o.right), 'LUMA Mask Right')
-			await self.sendProtocolSet('luma', 14, Number(o.bottom), 'LUMA Mask Bottom')
+			const left = Number(o.left)
+			const top = Number(o.top)
+			const right = Number(o.right)
+			const bottom = Number(o.bottom)
+			await self.sendProtocolField('luma', 'MaskEnable', Number(o.enable), 'LUMA Mask Enable')
+			// 文档约束：左侧不能大于右侧，顶部不能大于底部
+			await self.sendProtocolField('luma', 'MaskLeft', Math.min(left, right), 'LUMA Mask Left')
+			await self.sendProtocolField('luma', 'MaskTop', Math.min(top, bottom), 'LUMA Mask Top')
+			await self.sendProtocolField('luma', 'MaskRight', Math.max(right, left), 'LUMA Mask Right')
+			await self.sendProtocolField('luma', 'MaskBottom', Math.max(bottom, top), 'LUMA Mask Bottom')
 		},
 	}
 }
@@ -210,76 +336,189 @@ function registerLumaActions(self: ModuleInstance, actions: CompanionActionDefin
  *       16=MaskEnable,17=MaskLeft,18=MaskTop,19=MaskRight,20=MaskBottom
  */
 function registerChromaActions(self: ModuleInstance, actions: CompanionActionDefinitions): void {
+	// H4K：Key Color Type 只有 Red/Green/Blue、Size 0~100、有 Tolerance/Softness/Clip/Correction/Mask
+	const isH4K = !!self.getProtocolCommands()['keyType']
 	actions['chroma_status'] = {
 		name: 'CHROMA Status',
 		description: 'Set CHROMA status',
 		options: [{ type: 'dropdown', id: 'status', label: 'Status', choices: STATUS_CHOICES, default: 0 }],
 		callback: async (event) => {
-			await self.sendProtocolSet('chroma', 0, Number(event.options.status), 'CHROMA Status')
+			const status = Number(event.options.status)
+			// H4K：PIP / LUMA / CHROMA 互斥，先关掉其他两层（旧族直接返回）
+			if (status >= 1) await self.closeOtherKeys('chroma')
+			await self.sendProtocolField('chroma', 'Status', status, 'CHROMA Status')
+			if (status >= 1) self.markKeyTypeLocal(2)
 		},
 	}
 	actions['chroma_key_source'] = {
 		name: 'CHROMA Key Source',
 		description: 'CHROMA Key Source (0-7)',
-		options: [{ type: 'dropdown', id: 'value', label: 'Source', choices: SOURCE_CHOICES, default: 1 }],
+		options: [
+			{
+				type: 'dropdown',
+				id: 'value',
+				label: 'Source',
+				choices: keySourcesOf(self),
+				default: defaultSourceId(keySourcesOf(self)),
+			},
+		],
 		callback: async (event) => {
-			await self.sendProtocolSet('chroma', 1, Number(event.options.value), 'CHROMA Key Source')
+			await self.sendProtocolField('chroma', 'KeySource', Number(event.options.value), 'CHROMA Key Source')
 		},
 	}
 	actions['chroma_key_type'] = {
 		name: 'CHROMA Key Color Type',
-		description: 'CHROMA Key Color Type (Green/Blue/Red/Custom/Fetch)',
-		options: [{ type: 'dropdown', id: 'value', label: 'Type', choices: CHROMA_KEY_TYPE_CHOICES, default: 0 }],
-		callback: async (event) => {
-			await self.sendProtocolSet('chroma', 2, Number(event.options.value), 'CHROMA Key Color Type')
-		},
-	}
-	actions['chroma_adjust'] = {
-		name: 'CHROMA Adjust',
-		description: 'CHROMA Size/PosX/PosY/Similarity/Smoothness/Spill/Opacity/Brightness/Contrast/Saturation',
+		description: 'CHROMA Key Color Type (H4K: Red/Green/Blue)',
 		options: [
-			slider('size', 'Zoom Size', 12, 100, 100),
-			slider('posx', 'Key PositionX', 0, 100, 50),
-			slider('posy', 'Key PositionY', 0, 100, 50),
-			slider('similarity', 'Similarity', 0, 100, 50),
-			slider('smooth', 'Smoothness', 0, 255, 0),
-			slider('spill', 'Spill', 0, 255, 0),
-			slider('opacity', 'Opacity', 0, 100, 100),
-			slider('brightness', 'Brightness', 0, 100, 50),
-			slider('contrast', 'Contrast', 0, 100, 50),
-			slider('saturation', 'Saturation', 0, 100, 50),
+			{
+				type: 'dropdown',
+				id: 'value',
+				label: 'Type',
+				choices: isH4K ? H4K_KEY_COLOR_CHOICES : CHROMA_KEY_TYPE_CHOICES,
+				default: 0,
+			},
 		],
 		callback: async (event) => {
+			await self.sendProtocolField('chroma', 'KeyType', Number(event.options.value), 'CHROMA Key Color Type')
+		},
+	}
+	// 参数选项按协议字段动态拼装（例：H4K 无 Spill/Opacity，但有 Angle/Tolerance/Softness/Clip/Correction/Color 调整）
+	const chromaAdjustOptions: AdjustOption[] = []
+	if (supports(self, 'chroma', 'Size'))
+		chromaAdjustOptions.push(
+			isH4K ? slider('size', 'Zoom Size', 0, 100, 100) : slider('size', 'Zoom Size', 12, 100, 100),
+		)
+	if (supports(self, 'chroma', 'PosX')) chromaAdjustOptions.push(slider('posx', 'Key PositionX', 0, 100, 50))
+	if (supports(self, 'chroma', 'PosY')) chromaAdjustOptions.push(slider('posy', 'Key PositionY', 0, 100, 50))
+	// 0617（Similarity/Smooth/Spill/Opacity 为它自己的字段）
+	if (supports(self, 'chroma', 'Similarity')) chromaAdjustOptions.push(slider('similarity', 'Similarity', 0, 100, 50))
+	if (supports(self, 'chroma', 'Smooth')) chromaAdjustOptions.push(slider('smooth', 'Smoothness', 0, 255, 0))
+	if (supports(self, 'chroma', 'Spill')) chromaAdjustOptions.push(slider('spill', 'Spill', 0, 255, 0))
+	if (supports(self, 'chroma', 'Opacity')) chromaAdjustOptions.push(slider('opacity', 'Opacity', 0, 100, 100))
+	if (supports(self, 'chroma', 'Brightness')) chromaAdjustOptions.push(slider('brightness', 'Brightness', 0, 100, 50))
+	if (supports(self, 'chroma', 'Contrast')) chromaAdjustOptions.push(slider('contrast', 'Contrast', 0, 100, 50))
+	if (supports(self, 'chroma', 'Saturation')) chromaAdjustOptions.push(slider('saturation', 'Saturation', 0, 100, 50))
+	// H4K 字段（Angle / Tolerance / Softness / Clip 范围 / Correction / RGB）
+	if (supports(self, 'chroma', 'Angle')) chromaAdjustOptions.push(slider('angle', 'Angle', 0, 100, 50))
+	if (supports(self, 'chroma', 'Tolerance')) chromaAdjustOptions.push(slider('tolerance', 'Tolerance', 0, 100, 50))
+	if (supports(self, 'chroma', 'Softness')) chromaAdjustOptions.push(slider('softness', 'Softness', 0, 100, 0))
+	if (supports(self, 'chroma', 'Clip')) {
+		chromaAdjustOptions.push({
+			type: 'dropdown',
+			id: 'clip',
+			label: 'Key Clip',
+			choices: [
+				{ id: 0, label: 'Off' },
+				{ id: 1, label: 'On' },
+				{ id: 2, label: 'Curve' },
+			],
+			default: 0,
+		})
+	}
+	if (supports(self, 'chroma', 'ClipMin')) chromaAdjustOptions.push(slider('clipMin', 'Clip Min', 0, 100, 0))
+	if (supports(self, 'chroma', 'ClipMax')) chromaAdjustOptions.push(slider('clipMax', 'Clip Max', 0, 100, 100))
+	if (supports(self, 'chroma', 'Correction')) {
+		chromaAdjustOptions.push({
+			type: 'dropdown',
+			id: 'correction',
+			label: 'Correction',
+			choices: [
+				{ id: 0, label: 'Off' },
+				{ id: 1, label: 'Red' },
+				{ id: 2, label: 'Green' },
+				{ id: 3, label: 'Blue' },
+			],
+			default: 0,
+		})
+	}
+	if (supports(self, 'chroma', 'CorrectionVal'))
+		chromaAdjustOptions.push(slider('correctionVal', 'Correction Value', 0, 100, 0))
+	if (supports(self, 'chroma', 'ColorRed')) chromaAdjustOptions.push(slider('colorRed', 'Red Adjust', 0, 100, 50))
+	if (supports(self, 'chroma', 'ColorGreen')) chromaAdjustOptions.push(slider('colorGreen', 'Green Adjust', 0, 100, 50))
+	if (supports(self, 'chroma', 'ColorBlue')) chromaAdjustOptions.push(slider('colorBlue', 'Blue Adjust', 0, 100, 50))
+	if (isH4K && supports(self, 'chroma', 'MaskEnable')) chromaAdjustOptions.push(onoff('maskEnable', 'Mask Enable', 0))
+	if (isH4K && supports(self, 'chroma', 'MaskLeft'))
+		chromaAdjustOptions.push(slider('maskLeft', 'Mask Left', 0, 100, 0))
+	if (isH4K && supports(self, 'chroma', 'MaskTop')) chromaAdjustOptions.push(slider('maskTop', 'Mask Top', 0, 100, 0))
+	if (isH4K && supports(self, 'chroma', 'MaskRight'))
+		chromaAdjustOptions.push(slider('maskRight', 'Mask Right', 0, 100, 100))
+	if (isH4K && supports(self, 'chroma', 'MaskBottom'))
+		chromaAdjustOptions.push(slider('maskBottom', 'Mask Bottom', 0, 100, 100))
+	actions['chroma_adjust'] = {
+		name: 'CHROMA Adjust',
+		description:
+			'CHROMA Size/Pos/Angle/Tolerance/Softness/Clip/Correction/RGB/Mask（0617：Similarity/Smooth/Spill/Opacity）',
+		options: chromaAdjustOptions,
+		callback: async (event) => {
 			const o = event.options
-			await self.sendProtocolSet('chroma', 6, Number(o.size), 'CHROMA Zoom Size')
-			await self.sendProtocolSet('chroma', 7, Number(o.posx), 'CHROMA Key PositionX')
-			await self.sendProtocolSet('chroma', 8, Number(o.posy), 'CHROMA Key PositionY')
-			await self.sendProtocolSet('chroma', 9, Number(o.similarity), 'CHROMA Similarity')
-			await self.sendProtocolSet('chroma', 10, Number(o.smooth), 'CHROMA Smoothness')
-			await self.sendProtocolSet('chroma', 11, Number(o.spill), 'CHROMA Spill')
-			await self.sendProtocolSet('chroma', 12, Number(o.opacity), 'CHROMA Opacity')
-			await self.sendProtocolSet('chroma', 13, Number(o.brightness), 'CHROMA Brightness')
-			await self.sendProtocolSet('chroma', 14, Number(o.contrast), 'CHROMA Contrast')
-			await self.sendProtocolSet('chroma', 15, Number(o.saturation), 'CHROMA Saturation')
+			await self.sendProtocolField('chroma', 'Size', Number(o.size), 'CHROMA Zoom Size')
+			await self.sendProtocolField('chroma', 'PosX', Number(o.posx), 'CHROMA Key PositionX')
+			await self.sendProtocolField('chroma', 'PosY', Number(o.posy), 'CHROMA Key PositionY')
+			// 0617 字段（H4K 无这些字段，会自动跳过）
+			const legacy: Array<[string, string]> = [
+				['similarity', 'Similarity'],
+				['smooth', 'Smooth'],
+				['spill', 'Spill'],
+				['opacity', 'Opacity'],
+				['brightness', 'Brightness'],
+				['contrast', 'Contrast'],
+				['saturation', 'Saturation'],
+			]
+			for (const [opt, field] of legacy) {
+				if (o[opt] === undefined) continue
+				await self.sendProtocolField('chroma', field, Number(o[opt]), `CHROMA ${field}`)
+			}
+			// H4K 字段（0617 无这些字段，会自动跳过）
+			const extras: Array<[string, string]> = [
+				['angle', 'Angle'],
+				['tolerance', 'Tolerance'],
+				['softness', 'Softness'],
+				['clip', 'Clip'],
+				['correction', 'Correction'],
+				['correctionVal', 'CorrectionVal'],
+				['colorRed', 'ColorRed'],
+				['colorGreen', 'ColorGreen'],
+				['colorBlue', 'ColorBlue'],
+				['maskEnable', 'MaskEnable'],
+				['maskLeft', 'MaskLeft'],
+				['maskTop', 'MaskTop'],
+				['maskRight', 'MaskRight'],
+				['maskBottom', 'MaskBottom'],
+			]
+			// Clip_Min ≤ Clip_Max（先算好再统一下发）
+			// H4K 字段（0617 无这些字段，会自动跳过）；旧按钮遗留的 -1 按 0 处理
+			const cMin = Math.max(0, Math.min(Number(o.clipMin ?? 0), Number(o.clipMax ?? 100)))
+			const cMax = Math.max(0, Math.max(Number(o.clipMin ?? 0), Number(o.clipMax ?? 100)))
+			for (const [opt, field] of extras) {
+				if (o[opt] === undefined) continue
+				let v = Math.max(0, Number(o[opt]))
+				if (field === 'ClipMin') v = cMin
+				if (field === 'ClipMax') v = cMax
+				await self.sendProtocolField('chroma', field, v, `CHROMA ${field}`)
+			}
 		},
 	}
 	actions['chroma_mask'] = {
 		name: 'CHROMA Mask',
-		description: 'CHROMA Mask enable + Left/Top/Right/Bottom',
+		description: 'CHROMA Mask enable + Left/Top/Right/Bottom (0~100%，左侧不能大于右侧)',
 		options: [
 			onoff('enable', 'Enable'),
-			slider('left', 'Mask Left', 0, 50, 0),
-			slider('top', 'Mask Top', 0, 50, 0),
-			slider('right', 'Mask Right', 50, 100, 100),
-			slider('bottom', 'Mask Bottom', 50, 100, 100),
+			slider('left', 'Mask Left', 0, isH4K ? 100 : 50, 0),
+			slider('top', 'Mask Top', 0, isH4K ? 100 : 50, 0),
+			slider('right', 'Mask Right', isH4K ? 0 : 50, 100, 100),
+			slider('bottom', 'Mask Bottom', isH4K ? 0 : 50, 100, 100),
 		],
 		callback: async (event) => {
 			const o = event.options
-			await self.sendProtocolSet('chroma', 16, Number(o.enable), 'CHROMA Mask Enable')
-			await self.sendProtocolSet('chroma', 17, Number(o.left), 'CHROMA Mask Left')
-			await self.sendProtocolSet('chroma', 18, Number(o.top), 'CHROMA Mask Top')
-			await self.sendProtocolSet('chroma', 19, Number(o.right), 'CHROMA Mask Right')
-			await self.sendProtocolSet('chroma', 20, Number(o.bottom), 'CHROMA Mask Bottom')
+			const left = Number(o.left)
+			const top = Number(o.top)
+			const right = Number(o.right)
+			const bottom = Number(o.bottom)
+			await self.sendProtocolField('chroma', 'MaskEnable', Number(o.enable), 'CHROMA Mask Enable')
+			await self.sendProtocolField('chroma', 'MaskLeft', Math.min(left, right), 'CHROMA Mask Left')
+			await self.sendProtocolField('chroma', 'MaskTop', Math.min(top, bottom), 'CHROMA Mask Top')
+			await self.sendProtocolField('chroma', 'MaskRight', Math.max(right, left), 'CHROMA Mask Right')
+			await self.sendProtocolField('chroma', 'MaskBottom', Math.max(bottom, top), 'CHROMA Mask Bottom')
 		},
 	}
 }
@@ -296,50 +535,75 @@ function registerDskActions(self: ModuleInstance, actions: CompanionActionDefini
 		description: 'Set DSK status',
 		options: [{ type: 'dropdown', id: 'status', label: 'Status', choices: STATUS_CHOICES, default: 0 }],
 		callback: async (event) => {
-			await self.sendProtocolSet('dsk', 1, Number(event.options.status), 'DSK Status')
+			await self.sendProtocolField('dsk', 'Status', Number(event.options.status), 'DSK Status')
 		},
 	}
-	actions['dsk_fill_source'] = {
-		name: 'DSK Fill Source',
-		description: 'DSK Fill Source (0-7)',
-		options: [{ type: 'dropdown', id: 'value', label: 'Source', choices: SOURCE_CHOICES, default: 1 }],
-		callback: async (event) => {
-			await self.sendProtocolSet('dsk', 2, Number(event.options.value), 'DSK Fill Source')
-		},
+	if (supports(self, 'dsk', 'FillSource')) {
+		actions['dsk_fill_source'] = {
+			name: 'DSK Fill Source',
+			description: 'DSK Fill Source (0-7)',
+			options: [
+				{
+					type: 'dropdown',
+					id: 'value',
+					label: 'Source',
+					choices: keySourcesOf(self),
+					default: defaultSourceId(keySourcesOf(self)),
+				},
+			],
+			callback: async (event) => {
+				await self.sendProtocolField('dsk', 'FillSource', Number(event.options.value), 'DSK Fill Source')
+			},
+		}
 	}
 	actions['dsk_key_source'] = {
 		name: 'DSK Key Source',
 		description: 'DSK Key Source (0-7)',
-		options: [{ type: 'dropdown', id: 'value', label: 'Source', choices: SOURCE_CHOICES, default: 1 }],
+		options: [
+			{
+				type: 'dropdown',
+				id: 'value',
+				label: 'Source',
+				choices: keySourcesOf(self),
+				default: defaultSourceId(keySourcesOf(self)),
+			},
+		],
 		callback: async (event) => {
-			await self.sendProtocolSet('dsk', 3, Number(event.options.value), 'DSK Key Source')
+			await self.sendProtocolField('dsk', 'KeySource', Number(event.options.value), 'DSK Key Source')
 		},
 	}
-	actions['dsk_tie'] = {
-		name: 'DSK Tie',
-		description: 'DSK Tie (0:OFF / 1:ON)',
-		options: [onoff('value', 'State')],
-		callback: async (event) => {
-			await self.sendProtocolSet('dsk', 0, Number(event.options.value), 'DSK Tie')
-		},
+	if (supports(self, 'dsk', 'Tie')) {
+		actions['dsk_tie'] = {
+			name: 'DSK Tie',
+			description: 'DSK Tie (0:OFF / 1:ON)',
+			options: [onoff('value', 'State')],
+			callback: async (event) => {
+				await self.sendProtocolField('dsk', 'Tie', Number(event.options.value), 'DSK Tie')
+			},
+		}
 	}
+	const dskAdjustOptions: CompanionInputFieldNumber[] = []
+	if (supports(self, 'dsk', 'Clip')) dskAdjustOptions.push(slider('clip', 'Clip', 0, 100, 50))
+	if (supports(self, 'dsk', 'Gain')) dskAdjustOptions.push(slider('gain', 'Gain', 0, 100, 50))
 	actions['dsk_adjust'] = {
 		name: 'DSK Adjust',
 		description: 'DSK Clip / Gain',
-		options: [slider('clip', 'Clip', 0, 100, 50), slider('gain', 'Gain', 0, 100, 50)],
+		options: dskAdjustOptions,
 		callback: async (event) => {
 			const o = event.options
-			await self.sendProtocolSet('dsk', 4, Number(o.clip), 'DSK Clip')
-			await self.sendProtocolSet('dsk', 5, Number(o.gain), 'DSK Gain')
+			await self.sendProtocolField('dsk', 'Clip', Number(o.clip), 'DSK Clip')
+			await self.sendProtocolField('dsk', 'Gain', Number(o.gain), 'DSK Gain')
 		},
 	}
-	actions['dsk_invert'] = {
-		name: 'DSK Invert',
-		description: 'DSK Invert (0:OFF / 1:ON)',
-		options: [onoff('value', 'State')],
-		callback: async (event) => {
-			await self.sendProtocolSet('dsk', 6, Number(event.options.value), 'DSK Invert')
-		},
+	if (supports(self, 'dsk', 'Invert')) {
+		actions['dsk_invert'] = {
+			name: 'DSK Invert',
+			description: 'DSK Invert (0:OFF / 1:ON)',
+			options: [onoff('value', 'State')],
+			callback: async (event) => {
+				await self.sendProtocolField('dsk', 'Invert', Number(event.options.value), 'DSK Invert')
+			},
+		}
 	}
 	actions['dsk_mask'] = {
 		name: 'DSK Mask',
@@ -353,11 +617,11 @@ function registerDskActions(self: ModuleInstance, actions: CompanionActionDefini
 		],
 		callback: async (event) => {
 			const o = event.options
-			await self.sendProtocolSet('dsk', 7, Number(o.enable), 'DSK Mask Enable')
-			await self.sendProtocolSet('dsk', 8, Number(o.left), 'DSK Mask Left')
-			await self.sendProtocolSet('dsk', 9, Number(o.top), 'DSK Mask Top')
-			await self.sendProtocolSet('dsk', 10, Number(o.right), 'DSK Mask Right')
-			await self.sendProtocolSet('dsk', 11, Number(o.bottom), 'DSK Mask Bottom')
+			await self.sendProtocolField('dsk', 'MaskEnable', Number(o.enable), 'DSK Mask Enable')
+			await self.sendProtocolField('dsk', 'MaskLeft', Number(o.left), 'DSK Mask Left')
+			await self.sendProtocolField('dsk', 'MaskTop', Number(o.top), 'DSK Mask Top')
+			await self.sendProtocolField('dsk', 'MaskRight', Number(o.right), 'DSK Mask Right')
+			await self.sendProtocolField('dsk', 'MaskBottom', Number(o.bottom), 'DSK Mask Bottom')
 		},
 	}
 }
@@ -373,7 +637,7 @@ function registerLogoActions(self: ModuleInstance, actions: CompanionActionDefin
 		description: 'Set LOGO status',
 		options: [{ type: 'dropdown', id: 'status', label: 'Status', choices: STATUS_CHOICES, default: 0 }],
 		callback: async (event) => {
-			await self.sendProtocolSet('logo', 0, Number(event.options.status), 'LOGO Status')
+			await self.sendProtocolField('logo', 'Status', Number(event.options.status), 'LOGO Status')
 		},
 	}
 	actions['logo_select'] = {
@@ -384,29 +648,32 @@ function registerLogoActions(self: ModuleInstance, actions: CompanionActionDefin
 				type: 'dropdown',
 				id: 'value',
 				label: 'Logo',
-				choices: [0, 1, 2, 3, 4, 5, 6, 7].map((n) => ({ id: n, label: `Logo ${n}` })),
+				choices: Array.from({ length: self.getProtocolFamilyInfo().logoCount }, (_, n) => ({
+					id: n,
+					label: `Logo ${n}`,
+				})),
 				default: 0,
 			},
 		],
 		callback: async (event) => {
-			await self.sendProtocolSet('logo', 1, Number(event.options.value), 'LOGO Select')
+			await self.sendProtocolField('logo', 'Select', Number(event.options.value), 'LOGO Select')
 		},
 	}
+	const logoAdjustOptions: CompanionInputFieldNumber[] = []
+	if (supports(self, 'logo', 'PosX')) logoAdjustOptions.push(slider('posx', 'PositionX', 0, 100, 50))
+	if (supports(self, 'logo', 'PosY')) logoAdjustOptions.push(slider('posy', 'PositionY', 0, 100, 50))
+	if (supports(self, 'logo', 'Size')) logoAdjustOptions.push(slider('size', 'Size', 5, 20, 10))
+	if (supports(self, 'logo', 'Opacity')) logoAdjustOptions.push(slider('opacity', 'Opacity', 20, 100, 100))
 	actions['logo_adjust'] = {
 		name: 'LOGO Adjust',
 		description: 'LOGO PosX/PosY/Size/Opacity',
-		options: [
-			slider('posx', 'PositionX', 0, 100, 50),
-			slider('posy', 'PositionY', 0, 100, 50),
-			slider('size', 'Size', 5, 20, 10),
-			slider('opacity', 'Opacity', 20, 100, 100),
-		],
+		options: logoAdjustOptions,
 		callback: async (event) => {
 			const o = event.options
-			await self.sendProtocolSet('logo', 2, Number(o.posx), 'LOGO PositionX')
-			await self.sendProtocolSet('logo', 3, Number(o.posy), 'LOGO PositionY')
-			await self.sendProtocolSet('logo', 4, Number(o.size), 'LOGO Size')
-			await self.sendProtocolSet('logo', 5, Number(o.opacity), 'LOGO Opacity')
+			await self.sendProtocolField('logo', 'PosX', Number(o.posx), 'LOGO PositionX')
+			await self.sendProtocolField('logo', 'PosY', Number(o.posy), 'LOGO PositionY')
+			await self.sendProtocolField('logo', 'Size', Number(o.size), 'LOGO Size')
+			await self.sendProtocolField('logo', 'Opacity', Number(o.opacity), 'LOGO Opacity')
 		},
 	}
 }
@@ -418,41 +685,104 @@ function registerLogoActions(self: ModuleInstance, actions: CompanionActionDefin
  * 0x0010 按键：Wipe1~4=27~30, MIX=31, DIP=32
  */
 function registerTransitionActions(self: ModuleInstance, actions: CompanionActionDefinitions): void {
-	const wipes: Array<[number, number, string]> = [
-		[1, 27, 'WIPE1'],
-		[2, 28, 'WIPE2'],
-		[3, 29, 'WIPE3'],
-		[4, 30, 'WIPE4'],
-	]
-	for (const [n, keyVal, label] of wipes) {
+	// WIPE 数量与键值按协议族决定（0617：4 个；H4K：3 个）
+	const family = self.getProtocolFamilyInfo()
+	const keys = family.keyMap
+	for (let n = 1; n <= family.wipeCount; n++) {
+		const keyVal = keys.wipe[n - 1]
+		const label = `WIPE${n}`
 		actions[`trans_wipe${n}`] = {
 			name: `Transition ${label}`,
-			description: `Set ${label} style (0x0020, NO.${n - 1}) and press ${label} (0x0010, Key_val=${keyVal})`,
+			description: `Set ${label} style (0x0020, No.${n}) and press ${label} (0x0010, Key_val=${keyVal})`,
 			options: [
-				{ type: 'dropdown', id: 'style', label: `${label} Style (0-10)`, choices: WIPE_STYLE_CHOICES, default: 0 },
+				{
+					type: 'dropdown',
+					id: 'style',
+					label: `${label} Style`,
+					choices: family.wipeStyles,
+					default: family.wipeStyles[0]?.id ?? 0,
+				},
 			],
 			callback: async (event) => {
-				await self.sendProtocolSet('transition', n - 1, Number(event.options.style), `${label} Style`)
+				// 样式值按协议族偏移换算（H4K / 0617 的 offset 均为 0，下拉 id 就是下发的样式值）
+				const styleValue = Number(event.options.style) - (family.wipeStyleOffset ?? 0)
+				// 仅 H4K：登记写后校验，回读 0x0120 时日志会打印实际落到哪个 WipeN
+				if (family.queryAllOnConnect) self.armWipeCheck(n, styleValue)
+				await self.sendProtocolField('transition', `Wipe${n}`, styleValue, `${label} Style`)
 				await self.sendToDevice('KEY_PRESS', { keyVal })
+				// 仅 H4K：回读 0x0120（日志会打印设备侧 Wipe1/2/3），用于核对样式是否落到正确通道
+				if (family.queryAllOnConnect) {
+					setTimeout(() => {
+						void self.queryTransitionOnce()
+					}, 250)
+				}
 			},
 		}
 	}
 
-	// MIX / DIP：0x0010 按键（整合为一个下拉）
+	// 合并动作：一次选择 WIPE 通道 + 样式（仅 H4K 等开启 mergeWipeStyleAction 的族；
+	// 0617/0605 保持原有的 trans_wipe1~4 动作列表完全不变）
+	if (family.mergeWipeStyleAction) {
+		actions['trans_wipe_style'] = {
+			name: 'Transition WIPE Style (Wipe1/2/3)',
+			description: '设置指定 WIPE 通道的样式（0x0020），可选是否同时按下该 WIPE 键切换通道',
+			options: [
+				{
+					type: 'dropdown',
+					id: 'wipe',
+					label: 'Wipe Channel',
+					choices: Array.from({ length: family.wipeCount }, (_, i) => ({ id: i + 1, label: `WIPE${i + 1}` })),
+					default: 1,
+				},
+				{
+					type: 'dropdown',
+					id: 'style',
+					label: 'Style',
+					choices: family.wipeStyles,
+					default: family.wipeStyles[0]?.id ?? 0,
+				},
+				{
+					type: 'checkbox',
+					id: 'press',
+					label: '同时按下 WIPE 键（切换到该通道）',
+					default: true,
+				},
+			],
+			callback: async (event) => {
+				const n = Number(event.options.wipe)
+				const styleValue = Number(event.options.style) - (family.wipeStyleOffset ?? 0)
+				const press = Boolean(event.options.press)
+				if (family.queryAllOnConnect) self.armWipeCheck(n, styleValue)
+				await self.sendProtocolField('transition', `Wipe${n}`, styleValue, `WIPE${n} Style`)
+				if (press) {
+					const keyVal = keys.wipe[n - 1]
+					if (keyVal !== undefined) await self.sendToDevice('KEY_PRESS', { keyVal })
+				}
+				// 仅 H4K：回读 0x0120 核对样式是否落到正确通道
+				if (family.queryAllOnConnect) {
+					setTimeout(() => {
+						void self.queryTransitionOnce()
+					}, 250)
+				}
+			},
+		}
+	}
+
+	// MIX / DIP / FREEZE：0x0010 按键（整合为一个下拉）
 	actions['trans_effect'] = {
 		name: 'Transition MIX / DIP',
-		description: 'Press MIX (31) or DIP (32)',
+		description: `Press MIX (${keys.mix}) / DIP (${keys.dip}) / FREEZE (${keys.freeze})`,
 		options: [
 			{
 				type: 'dropdown',
 				id: 'value',
 				label: 'Effect',
 				choices: [
-					{ id: TRANSITION_KEY_VALUES['MIX'], label: 'MIX' },
-					{ id: TRANSITION_KEY_VALUES['DIP'], label: 'DIP' },
-					{ id: TRANSITION_KEY_VALUES['FREEZE'], label: 'FREEZE' },
+					{ id: keys.mix, label: 'MIX' },
+					{ id: keys.dip, label: 'DIP' },
+					{ id: keys.freeze, label: 'FREEZE' },
 				],
-				default: TRANSITION_KEY_VALUES['MIX'],
+				default: keys.mix,
 			},
 		],
 		callback: async (event) => {
@@ -463,10 +793,10 @@ function registerTransitionActions(self: ModuleInstance, actions: CompanionActio
 	// Direction：Normal / Invert / Flip-Flop（整合为一个下拉）
 	actions['trans_direction'] = {
 		name: 'Transition Direction',
-		description: 'Set Direction (0x0020, NO.5): Normal / Invert / Flip-Flop',
+		description: 'Set Direction (0x0020): Normal / Invert / Flip-Flop',
 		options: [{ type: 'dropdown', id: 'value', label: 'Direction', choices: DIRECTION_CHOICES, default: 0 }],
 		callback: async (event) => {
-			await self.sendProtocolSet('transition', 5, Number(event.options.value), 'Transition Direction')
+			await self.sendProtocolField('transition', 'Direction', Number(event.options.value), 'Transition Direction')
 		},
 	}
 }
@@ -480,18 +810,6 @@ function registerTransitionActions(self: ModuleInstance, actions: CompanionActio
  *   43~45=XLR(EN/VOL/Delay), 46~48=LineIn(EN/VOL/Delay)
  * 注：XLR 与 MIC1~2 互斥，由 MicXlrMode(32) 控制。
  */
-const AUDIO_EAR_SOURCE_CHOICES = [
-	{ id: 0, label: 'PGM' },
-	{ id: 1, label: 'IN1' },
-	{ id: 2, label: 'IN2' },
-	{ id: 3, label: 'IN3' },
-	{ id: 4, label: 'IN4' },
-	{ id: 5, label: 'IN5' },
-	{ id: 6, label: 'IN6' },
-	{ id: 7, label: 'MIC1' },
-	{ id: 8, label: 'MIC2' },
-	{ id: 9, label: 'Line In' },
-]
 const AUDIO_IN_CHOICES = [
 	{ id: 1, label: 'IN1' },
 	{ id: 2, label: 'IN2' },
@@ -511,86 +829,109 @@ const AUDIO_MIC_XLR_MODE_CHOICES = [
 
 /** 注册 AUDIO 分组动作（设置指令 0x0050）—— 每个动作只负责一个功能 */
 function registerAudioActions(self: ModuleInstance, actions: CompanionActionDefinitions): void {
-	// 1) 无通道的开关（Enable / AFV / Mode 等）
-	const simpleToggles: Array<[string, string, number]> = [
-		['audio_all_afv', 'Audio All AFV', 1],
-		['audio_master_en', 'Audio PGM OUT Enable', 3],
-		['audio_ear_en', 'Audio Earphone Enable', 5],
-		['audio_xlr_en', 'Audio XLR Enable', 43],
-		['audio_line_en', 'Audio Line In Enable', 46],
+	const family = self.getProtocolFamilyInfo()
+
+	// 1) 无通道的开关（按协议字段存在性注册，XLR/LineIn 仅 0617 支持）
+	const simpleToggles: Array<[string, string, string]> = [
+		['audio_all_afv', 'Audio All AFV', 'AllAfv'],
+		['audio_master_en', 'Audio PGM OUT Enable', 'MasterEnable'],
+		['audio_ear_en', 'Audio Earphone Enable', 'EarEnable'],
+		['audio_xlr_en', 'Audio XLR Enable', 'XlrEnable'],
+		['audio_line_en', 'Audio Line In Enable', 'LineInEnable'],
 	]
 	for (const [id, label, field] of simpleToggles) {
+		if (!supports(self, 'audio', field)) continue
+		// H4K 无 ALL AFV 功能（协议字段仍在布局中，只是不注册 UI）
+		if (id === 'audio_all_afv' && family.hideAllAfvAction) continue
 		actions[id] = {
 			name: label,
-			description: `${label} (0x0050 NO.${field})`,
+			description: `${label} (0x0050 ${field})`,
 			options: [onoff('value', 'State')],
 			callback: async (event) => {
-				await self.sendProtocolSet('audio', field, Number(event.options.value), label)
+				await self.sendProtocolField('audio', field, Number(event.options.value), label)
 			},
 		}
 	}
 
 	// 2) 无通道的滑块（Volume / Delay）
-	const simpleSliders: Array<[string, string, number, number, number, number]> = [
-		['audio_master_vol', 'Audio PGM OUT Volume', 4, 0, 72, 50],
-		['audio_ear_vol', 'Audio Earphone Volume', 6, 0, 72, 50],
-		['audio_xlr_vol', 'Audio XLR Volume', 44, 0, 72, 50],
-		['audio_xlr_delay', 'Audio XLR Delay', 45, 0, 100, 0],
-		['audio_line_vol', 'Audio Line In Volume', 47, 0, 72, 50],
-		['audio_line_delay', 'Audio Line In Delay', 48, 0, 100, 0],
+	const simpleSliders: Array<[string, string, string, number, number, number]> = [
+		['audio_master_vol', 'Audio PGM OUT Volume', 'MasterVolume', 0, 72, 50],
+		['audio_ear_vol', 'Audio Earphone Volume', 'EarVolume', 0, 72, 50],
+		['audio_xlr_vol', 'Audio XLR Volume', 'XlrVolume', 0, 72, 50],
+		['audio_xlr_delay', 'Audio XLR Delay', 'XlrDelay', 0, 100, 0],
+		['audio_line_vol', 'Audio Line In Volume', 'LineInVolume', 0, 72, 50],
+		['audio_line_delay', 'Audio Line In Delay', 'LineInDelay', 0, 100, 0],
 	]
 	for (const [id, label, field, min, max, def] of simpleSliders) {
+		if (!supports(self, 'audio', field)) continue
 		actions[id] = {
 			name: label,
-			description: `${label} (0x0050 NO.${field})`,
+			description: `${label} (0x0050 ${field})`,
 			options: [slider('value', 'Value', min, max, def)],
 			callback: async (event) => {
-				await self.sendProtocolSet('audio', field, Number(event.options.value), label)
+				await self.sendProtocolField('audio', field, Number(event.options.value), label)
 			},
 		}
 	}
 
-	// 3) Earphone 源（下拉）
-	actions['audio_ear_src'] = {
-		name: 'Audio Earphone Source',
-		description: 'Earphone Source (0x0050 NO.7)',
-		options: [{ type: 'dropdown', id: 'value', label: 'Source', choices: AUDIO_EAR_SOURCE_CHOICES, default: 0 }],
-		callback: async (event) => {
-			await self.sendProtocolSet('audio', 7, Number(event.options.value), 'Earphone Source')
-		},
+	// 3) Earphone 源（下拉）：IN 路数按协议族裁剪，MIC / Line In 仅在协议支持时提供
+	//    - 0617：PGM + IN1~6 + MIC1/2 + Line In（10 项，与原行为一致）
+	//    - H4K ：PGM + IN1~4 + MIC1/2（无 IN5/IN6、无 Line In）
+	if (supports(self, 'audio', 'EarSource')) {
+		const earSources: Array<{ id: number; label: string }> = [{ id: 0, label: 'PGM' }]
+		for (let n = 1; n <= family.inputCount; n++) earSources.push({ id: n, label: `IN${n}` })
+		if (supports(self, 'audio', 'Mic1Enable')) earSources.push({ id: 7, label: 'MIC1' })
+		if (supports(self, 'audio', 'Mic2Enable')) earSources.push({ id: 8, label: 'MIC2' })
+		if (supports(self, 'audio', 'LineInEnable')) earSources.push({ id: 9, label: 'Line In' })
+		actions['audio_ear_src'] = {
+			name: 'Audio Earphone Source',
+			description: 'Earphone Source (0x0050 EarSource)',
+			options: [{ type: 'dropdown', id: 'value', label: 'Source', choices: earSources, default: 0 }],
+			callback: async (event) => {
+				await self.sendProtocolField('audio', 'EarSource', Number(event.options.value), 'Earphone Source')
+			},
+		}
 	}
 
-	// 4) IN1~6：每个功能一个动作（含通道下拉）；base = 8 + (ch-1)*4
-	const inFns: Array<[string, string, number, boolean, number, number, number]> = [
-		['audio_in_en', 'Audio IN Enable', 0, true, 0, 0, 0],
-		['audio_in_vol', 'Audio IN Volume', 1, false, 0, 72, 50],
-		['audio_in_afv', 'Audio IN AFV', 2, true, 0, 0, 0],
-		['audio_in_delay', 'Audio IN Delay', 3, false, 0, 100, 0],
+	// 4) IN 通道：每个功能一个动作（含通道下拉），通道数按协议族（0617=6 / H4K=4）
+	const inFns: Array<[string, string, boolean, number, number, number, string]> = [
+		['audio_in_en', 'Audio IN Enable', true, 0, 0, 0, 'Enable'],
+		['audio_in_vol', 'Audio IN Volume', false, 0, 72, 50, 'Volume'],
+		['audio_in_afv', 'Audio IN AFV', true, 0, 0, 0, 'Afv'],
+		['audio_in_delay', 'Audio IN Delay', false, 0, 100, 0, 'Delay'],
 	]
-	for (const [id, label, off, isToggle, min, max, def] of inFns) {
+	for (const [id, label, isToggle, min, max, def, suffix] of inFns) {
+		if (!supports(self, 'audio', `In1${suffix}`)) continue
 		actions[id] = {
 			name: label,
-			description: `${label} (0x0050, IN1~6)`,
+			description: `${label} (0x0050, IN1~${family.inputCount})`,
 			options: [
-				{ type: 'dropdown', id: 'channel', label: 'Channel', choices: AUDIO_IN_CHOICES, default: 1 },
+				{
+					type: 'dropdown',
+					id: 'channel',
+					label: 'Channel',
+					choices: AUDIO_IN_CHOICES.slice(0, family.inputCount),
+					default: 1,
+				},
 				isToggle ? onoff('value', 'State') : slider('value', 'Value', min, max, def),
 			],
 			callback: async (event) => {
-				const base = 8 + (Number(event.options.channel) - 1) * 4
-				await self.sendProtocolSet('audio', base + off, Number(event.options.value), label)
+				const ch = Number(event.options.channel)
+				await self.sendProtocolField('audio', `In${ch}${suffix}`, Number(event.options.value), label)
 			},
 		}
 	}
 
-	// 5) MIC1~2：每个功能一个动作（含通道下拉）；base = 33 + (ch-1)*5
-	const micFns: Array<[string, string, number, boolean, number, number, number]> = [
-		['audio_mic_en', 'Audio MIC Enable', 0, true, 0, 0, 0],
-		['audio_mic_guitar', 'Audio MIC Guitar', 1, true, 0, 0, 0],
-		['audio_mic_pregate', 'Audio MIC Pre-Gain', 2, false, 0, 14, 0],
-		['audio_mic_vol', 'Audio MIC Volume', 3, false, 0, 72, 50],
-		['audio_mic_delay', 'Audio MIC Delay', 4, false, 0, 100, 0],
+	// 5) MIC1~2：每个功能一个动作（Guitar/PreGain/Delay 仅 0617 支持）
+	const micFns: Array<[string, string, boolean, number, number, number, string]> = [
+		['audio_mic_en', 'Audio MIC Enable', true, 0, 0, 0, 'Enable'],
+		['audio_mic_guitar', 'Audio MIC Guitar', true, 0, 0, 0, 'Guitar'],
+		['audio_mic_pregate', 'Audio MIC Pre-Gain', false, 0, 14, 0, 'PreGain'],
+		['audio_mic_vol', 'Audio MIC Volume', false, 0, 72, 50, 'Volume'],
+		['audio_mic_delay', 'Audio MIC Delay', false, 0, 100, 0, 'Delay'],
 	]
-	for (const [id, label, off, isToggle, min, max, def] of micFns) {
+	for (const [id, label, isToggle, min, max, def, suffix] of micFns) {
+		if (!supports(self, 'audio', `Mic1${suffix}`)) continue
 		actions[id] = {
 			name: label,
 			description: `${label} (0x0050, MIC1~2)`,
@@ -599,30 +940,34 @@ function registerAudioActions(self: ModuleInstance, actions: CompanionActionDefi
 				isToggle ? onoff('value', 'State') : slider('value', 'Value', min, max, def),
 			],
 			callback: async (event) => {
-				const base = 33 + (Number(event.options.channel) - 1) * 5
-				await self.sendProtocolSet('audio', base + off, Number(event.options.value), label)
+				const ch = Number(event.options.channel)
+				await self.sendProtocolField('audio', `Mic${ch}${suffix}`, Number(event.options.value), label)
 			},
 		}
 	}
 
-	// 6) Reset
-	actions['audio_reset'] = {
-		name: 'Audio Reset',
-		description: 'AUDIO_RESET (0x0050 NO.2)',
-		options: [],
-		callback: async () => {
-			await self.sendProtocolSet('audio', 2, 1, 'Audio Reset')
-		},
+	// 6) Reset（H4K 不提供：hideAudioResetAction，协议字段 Reset 仍保留在布局中）
+	if (supports(self, 'audio', 'Reset') && !family.hideAudioResetAction) {
+		actions['audio_reset'] = {
+			name: 'Audio Reset',
+			description: 'AUDIO_RESET (0x0050 Reset)',
+			options: [],
+			callback: async () => {
+				await self.sendProtocolField('audio', 'Reset', 1, 'Audio Reset')
+			},
+		}
 	}
 
-	// 7) MIC / XLR 模式（XLR 与 MIC1~2 互斥）
-	actions['audio_mic_xlr_mode'] = {
-		name: 'Audio MIC / XLR Mode',
-		description: 'MIC_XLR_MODE (0x0050 NO.32): MIC(0) / XLR(1)',
-		options: [{ type: 'dropdown', id: 'value', label: 'Mode', choices: AUDIO_MIC_XLR_MODE_CHOICES, default: 0 }],
-		callback: async (event) => {
-			await self.sendProtocolSet('audio', 32, Number(event.options.value), 'MIC/XLR Mode')
-		},
+	// 7) MIC / XLR 模式（XLR 与 MIC 互斥，仅 0617 支持）
+	if (supports(self, 'audio', 'MicXlrMode')) {
+		actions['audio_mic_xlr_mode'] = {
+			name: 'Audio MIC / XLR Mode',
+			description: 'MIC_XLR_MODE (0x0050 MicXlrMode): MIC(0) / XLR(1)',
+			options: [{ type: 'dropdown', id: 'value', label: 'Mode', choices: AUDIO_MIC_XLR_MODE_CHOICES, default: 0 }],
+			callback: async (event) => {
+				await self.sendProtocolField('audio', 'MicXlrMode', Number(event.options.value), 'MIC/XLR Mode')
+			},
+		}
 	}
 }
 
@@ -644,7 +989,12 @@ function registerTbarActions(self: ModuleInstance, actions: CompanionActionDefin
 				default: 1,
 			},
 			slider('step', 'Step', 1, 500, 10),
-			{ type: 'static-text', id: 'current', label: 'Current Value (0-500)', value: '$(self:tbar_value)' },
+			{
+				type: 'static-text',
+				id: 'current',
+				label: 'Current Value (0-500)',
+				value: 'The current T-Bar position is available as the variable tbar_value',
+			},
 		],
 		callback: async (event) => {
 			await self.moveTBar(Number(event.options.direction), Number(event.options.step))
@@ -656,20 +1006,14 @@ function registerTbarActions(self: ModuleInstance, actions: CompanionActionDefin
 export function UpdateActions(self: ModuleInstance): void {
 	const actions: CompanionActionDefinitions = {}
 
-	// 源选择（PGM1~6 / PVW1~6 + Pattern）：整合为一个动作，用下拉选
+	// 源选择（PGM1~N / PVW1~N + Pattern）：键值与路数按协议族决定（0617=6 路 / H4K=4 路）
+	const family = self.getProtocolFamilyInfo()
+	const keys = family.keyMap
 	const sourceChoices: Array<{ id: number; label: string }> = []
-	for (const [label, keyVal] of Object.entries(PGM_KEY_VALUES)) {
-		sourceChoices.push({ id: keyVal, label })
-	}
-	for (const [label, keyVal] of Object.entries(PATTERN_KEY_VALUES)) {
-		if (label.startsWith('PGM_')) sourceChoices.push({ id: keyVal, label: label.replace('_', ' ') })
-	}
-	for (const [label, keyVal] of Object.entries(PVW_KEY_VALUES)) {
-		sourceChoices.push({ id: keyVal, label })
-	}
-	for (const [label, keyVal] of Object.entries(PATTERN_KEY_VALUES)) {
-		if (label.startsWith('PVW_')) sourceChoices.push({ id: keyVal, label: label.replace('_', ' ') })
-	}
+	keys.pgm.forEach((keyVal, i) => sourceChoices.push({ id: keyVal, label: `PGM${i + 1}` }))
+	keys.pgmPattern.forEach((keyVal, i) => sourceChoices.push({ id: keyVal, label: `PGM PATTERN${i + 1}` }))
+	keys.pvw.forEach((keyVal, i) => sourceChoices.push({ id: keyVal, label: `PVW${i + 1}` }))
+	keys.pvwPattern.forEach((keyVal, i) => sourceChoices.push({ id: keyVal, label: `PVW PATTERN${i + 1}` }))
 	actions['set_source'] = {
 		name: 'Source (PGM / PVW)',
 		description: 'Select PGM/PVW source (with pattern)',
@@ -683,26 +1027,26 @@ export function UpdateActions(self: ModuleInstance): void {
 		},
 	}
 
-	// Switch：Stream 1/2/3（整合为一个下拉）
-	actions['switch_stream'] = {
-		name: 'Switch Stream',
-		description: 'Toggle Stream 1 / 2 / 3',
-		options: [
-			{
-				type: 'dropdown',
-				id: 'value',
-				label: 'Stream',
-				choices: [
-					{ id: FUNCTION_KEY_VALUES.STREAM1, label: 'Stream 1' },
-					{ id: FUNCTION_KEY_VALUES.STREAM2, label: 'Stream 2' },
-					{ id: FUNCTION_KEY_VALUES.STREAM3, label: 'Stream 3' },
-				],
-				default: FUNCTION_KEY_VALUES.STREAM1,
+	// Key Type 只读（0x0130）：不需要 0x0030 写入，切 Key 层直接用 PIP/LUMA/CHROMA/DSK 的 Key / ON AIR 按键
+
+	// Switch：Stream 1~N（依赖 Codec 指令，H4K 无此能力）
+	if (family.hasStream && keys.stream.length > 0) {
+		actions['switch_stream'] = {
+			name: 'Switch Stream',
+			description: 'Toggle Stream 1 / 2 / 3',
+			options: [
+				{
+					type: 'dropdown',
+					id: 'value',
+					label: 'Stream',
+					choices: keys.stream.map((keyVal, i) => ({ id: keyVal, label: `Stream ${i + 1}` })),
+					default: keys.stream[0],
+				},
+			],
+			callback: async (event) => {
+				await self.sendToDevice('KEY_PRESS', { keyVal: Number(event.options.value) })
 			},
-		],
-		callback: async (event) => {
-			await self.sendToDevice('KEY_PRESS', { keyVal: Number(event.options.value) })
-		},
+		}
 	}
 
 	// Switch：CUT / AUTO / FTB / MUTE（整合为一个下拉）
@@ -715,12 +1059,12 @@ export function UpdateActions(self: ModuleInstance): void {
 				id: 'value',
 				label: 'Key',
 				choices: [
-					{ id: TRANSITION_KEY_VALUES.CUT, label: 'CUT' },
-					{ id: TRANSITION_KEY_VALUES.AUTO, label: 'AUTO' },
-					{ id: TRANSITION_KEY_VALUES.FTB, label: 'FTB' },
-					{ id: FUNCTION_KEY_VALUES.MUTE, label: 'MUTE' },
+					{ id: keys.cut, label: 'CUT' },
+					{ id: keys.auto, label: 'AUTO' },
+					{ id: keys.ftb, label: 'FTB' },
+					{ id: keys.mute, label: 'MUTE' },
 				],
-				default: TRANSITION_KEY_VALUES.CUT,
+				default: keys.cut,
 			},
 		],
 		callback: async (event) => {
@@ -728,10 +1072,49 @@ export function UpdateActions(self: ModuleInstance): void {
 		},
 	}
 
-	// PIP1 / PIP2 / PIP3
-	registerPipActions(self, actions, 1, 'pip1')
-	registerPipActions(self, actions, 2, 'pip2')
-	registerPipActions(self, actions, 3, 'pip3')
+	// H4K：直接发 Key / ON AIR 按键（0x0010 keytype）—— 与设备面板按键等效，
+	// 设备会自己把自己的 0x0130（当前激活 Key 层）上报上来，不需要 0x0030 写入
+	if (family.keyPressFormat === 'keytype') {
+		actions['key_module_press'] = {
+			name: 'Key Module Press (KEY / ON AIR)',
+			description: '直接按 PIP/LUMA/CHROMA/DSK 的 KEY 或 ON AIR 键',
+			options: [
+				{
+					type: 'dropdown',
+					id: 'value',
+					label: 'Key',
+					choices: [
+						{ id: keys.pip, label: 'PIP KEY' },
+						{ id: keys.pipOnAir, label: 'PIP ON AIR' },
+						{ id: keys.luma, label: 'LUMA KEY' },
+						{ id: keys.lumaOnAir, label: 'LUMA ON AIR' },
+						{ id: keys.chroma, label: 'CHROMA KEY' },
+						{ id: keys.chromaOnAir, label: 'CHROMA ON AIR' },
+						{ id: keys.dsk, label: 'DSK KEY' },
+						{ id: keys.dskOnAir, label: 'DSK ON AIR' },
+					],
+					default: keys.pip,
+				},
+			],
+			callback: async (event) => {
+				const keyVal = Number(event.options.value)
+				await self.sendToDevice('KEY_PRESS', { keyVal })
+				// 按的是 PIP/LUMA/CHROMA 的 KEY/ON AIR 键时，稍后回查 0x0130 校准高亮
+				const k = self.getProtocolFamilyInfo().keyMap
+				const pipKeys = [k.pip, k.pipOnAir]
+				const lumaKeys = [k.luma, k.lumaOnAir]
+				const chromaKeys = [k.chroma, k.chromaOnAir]
+				if (pipKeys.includes(keyVal)) self.markKeyTypeLocal(0)
+				else if (lumaKeys.includes(keyVal)) self.markKeyTypeLocal(1)
+				else if (chromaKeys.includes(keyVal)) self.markKeyTypeLocal(2)
+			},
+		}
+	}
+
+	// PIP1~N：路数按协议族（0617=3 / H4K=1）
+	for (let n = 1; n <= family.pipCount; n++) {
+		registerPipActions(self, actions, n, `pip${n}`)
+	}
 
 	// LUMA（0x0031）
 	registerLumaActions(self, actions)
@@ -765,6 +1148,12 @@ export function UpdateActions(self: ModuleInstance): void {
 		},
 	}
 
+	// 按当前产品档案裁剪：不属于该产品功能集的动作不注册
+	const profile = self.getDeviceProfile()
+	for (const id of Object.keys(actions)) {
+		if (!isIdEnabled(profile, id)) delete actions[id]
+	}
+
 	// 统一包裹：执行时记录本次动作的唯一 key（供“仅被点击按钮”的橙色执行反馈）
 	for (const id of Object.keys(actions)) {
 		const def = actions[id]
@@ -780,5 +1169,6 @@ export function UpdateActions(self: ModuleInstance): void {
 		}
 	}
 
+	self.setRegisteredActionIds(Object.keys(actions))
 	self.setActionDefinitions(actions)
 }

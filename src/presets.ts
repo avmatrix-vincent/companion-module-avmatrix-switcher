@@ -1,13 +1,7 @@
 import type { ModuleInstance } from './main.js'
 import { CompanionPresetDefinitions, CompanionButtonPresetDefinition, combineRgb } from '@companion-module/base'
-import {
-	PGM_KEY_VALUES,
-	PVW_KEY_VALUES,
-	PATTERN_KEY_VALUES,
-	TRANSITION_KEY_VALUES,
-	FUNCTION_KEY_VALUES,
-	flashKeyFor,
-} from './commandHandler.js'
+import { filterByProfile } from './devices/index.js'
+import { flashKeyFor } from './commandHandler.js'
 
 // 底色黑：仅“当前源”命中 pgm_active/pvw_active 反馈时才变红/绿（未收到状态时全为黑）
 const PGM_BG = combineRgb(0, 0, 0)
@@ -81,23 +75,29 @@ function buttonPreset(
  */
 export function UpdatePresets(self: ModuleInstance): void {
 	const presets: CompanionPresetDefinitions = {}
+	// 路数与键值按协议族决定（0617：6 路源 / 3 路 PIP / 4 WIPE；H4K：4 路源 / 1 路 PIP / 3 WIPE）
+	const family = self.getProtocolFamilyInfo()
+	const keys = family.keyMap
+	// WIPE 样式下拉首项 id（第一个图，固定 0；不能拿 wipeStyleOffset 当首项，那是下发偏移）
+	const firstWipeStyle = family.wipeStyles?.[0]?.id ?? 0
 
 	// ===== PGM 组（当前源 → 红色） =====
-	for (const [label, keyVal] of Object.entries(PGM_KEY_VALUES)) {
+	keys.pgm.forEach((keyVal, i) => {
+		const label = `PGM${i + 1}`
 		presets[`pgm_${label.toLowerCase()}`] = buttonPreset(
 			CAT_PGM,
 			label,
 			label,
 			'set_source',
 			{ source: keyVal },
-			{ feedbackId: 'pgm_active', options: { source: keyVal }, style: STYLE_RED },
+			{ feedbackId: 'pgm_active', options: { source: i + 1 }, style: STYLE_RED },
 			PGM_BG,
 		)
-	}
-	for (const [label, keyVal] of Object.entries(PATTERN_KEY_VALUES)) {
-		if (!label.startsWith('PGM_')) continue
-		const displayLabel = label.replace('PGM_PATTERN', 'PATTERN')
-		const disp = label.includes('1') ? 0xf0 : 0xf1
+	})
+	keys.pgmPattern.forEach((keyVal, i) => {
+		const label = `PGM_PATTERN${i + 1}`
+		const displayLabel = `PATTERN${i + 1}`
+		const disp = i === 0 ? 0xf0 : 0xf1
 		presets[`pgm_${label.toLowerCase()}`] = buttonPreset(
 			CAT_PGM,
 			displayLabel,
@@ -107,25 +107,25 @@ export function UpdatePresets(self: ModuleInstance): void {
 			{ feedbackId: 'pgm_active', options: { source: disp }, style: STYLE_RED },
 			PGM_BG,
 		)
-	}
+	})
 
 	// ===== PVW 组（当前源 → 绿色） =====
-	for (const [label, keyVal] of Object.entries(PVW_KEY_VALUES)) {
-		const sourceVal = keyVal - 8
+	keys.pvw.forEach((keyVal, i) => {
+		const label = `PVW${i + 1}`
 		presets[`pvw_${label.toLowerCase()}`] = buttonPreset(
 			CAT_PVW,
 			label,
 			label,
 			'set_source',
 			{ source: keyVal },
-			{ feedbackId: 'pvw_active', options: { source: sourceVal }, style: STYLE_GREEN },
+			{ feedbackId: 'pvw_active', options: { source: i + 1 }, style: STYLE_GREEN },
 			PVW_BG,
 		)
-	}
-	for (const [label, keyVal] of Object.entries(PATTERN_KEY_VALUES)) {
-		if (!label.startsWith('PVW_')) continue
-		const displayLabel = label.replace('PVW_PATTERN', 'PATTERN')
-		const disp = label.includes('1') ? 0xf0 : 0xf1
+	})
+	keys.pvwPattern.forEach((keyVal, i) => {
+		const label = `PVW_PATTERN${i + 1}`
+		const displayLabel = `PATTERN${i + 1}`
+		const disp = i === 0 ? 0xf0 : 0xf1
 		presets[`pvw_${label.toLowerCase()}`] = buttonPreset(
 			CAT_PVW,
 			displayLabel,
@@ -135,7 +135,7 @@ export function UpdatePresets(self: ModuleInstance): void {
 			{ feedbackId: 'pvw_active', options: { source: disp }, style: STYLE_GREEN },
 			PVW_BG,
 		)
-	}
+	})
 
 	// ===== Switch 组（Stream 1/2/3 + CUT/AUTO/FTB/MUTE） =====
 	const switchButtons: Array<{
@@ -151,7 +151,7 @@ export function UpdatePresets(self: ModuleInstance): void {
 			id: 'stream1',
 			label: 'Stream 1',
 			actionId: 'switch_stream',
-			value: FUNCTION_KEY_VALUES.STREAM1,
+			value: keys.stream[0] ?? 0,
 			fbId: 'stream_active',
 			fbOpts: { stream: 1 },
 			fbStyle: STYLE_YELLOW,
@@ -160,7 +160,7 @@ export function UpdatePresets(self: ModuleInstance): void {
 			id: 'stream2',
 			label: 'Stream 2',
 			actionId: 'switch_stream',
-			value: FUNCTION_KEY_VALUES.STREAM2,
+			value: keys.stream[1] ?? 0,
 			fbId: 'stream_active',
 			fbOpts: { stream: 2 },
 			fbStyle: STYLE_YELLOW,
@@ -169,17 +169,17 @@ export function UpdatePresets(self: ModuleInstance): void {
 			id: 'stream3',
 			label: 'Stream 3',
 			actionId: 'switch_stream',
-			value: FUNCTION_KEY_VALUES.STREAM3,
+			value: keys.stream[2] ?? 0,
 			fbId: 'stream_active',
 			fbOpts: { stream: 3 },
 			fbStyle: STYLE_YELLOW,
 		},
-		{ id: 'cut', label: 'CUT', actionId: 'switch_transition', value: TRANSITION_KEY_VALUES.CUT },
+		{ id: 'cut', label: 'CUT', actionId: 'switch_transition', value: keys.cut },
 		{
 			id: 'auto',
 			label: 'AUTO',
 			actionId: 'switch_transition',
-			value: TRANSITION_KEY_VALUES.AUTO,
+			value: keys.auto,
 			fbId: 'auto_active',
 			fbOpts: {},
 			fbStyle: STYLE_RED,
@@ -188,7 +188,7 @@ export function UpdatePresets(self: ModuleInstance): void {
 			id: 'ftb',
 			label: 'FTB',
 			actionId: 'switch_transition',
-			value: TRANSITION_KEY_VALUES.FTB,
+			value: keys.ftb,
 			fbId: 'ftb_active',
 			fbOpts: {},
 			fbStyle: STYLE_RED,
@@ -197,7 +197,7 @@ export function UpdatePresets(self: ModuleInstance): void {
 			id: 'mute',
 			label: 'MUTE',
 			actionId: 'switch_transition',
-			value: FUNCTION_KEY_VALUES.MUTE,
+			value: keys.mute,
 			fbId: 'mute_active',
 			fbOpts: {},
 			fbStyle: STYLE_RED,
@@ -307,7 +307,7 @@ export function UpdatePresets(self: ModuleInstance): void {
 			text: '[TRANS]\n——\nWIPE1',
 			name: 'TRANS WIPE1',
 			actionId: 'trans_wipe1',
-			opts: { style: 0 },
+			opts: { style: firstWipeStyle },
 			fbId: 'wipe_active',
 			fbOpts: { mode: 1 },
 			flashKey: 'key:27',
@@ -317,7 +317,7 @@ export function UpdatePresets(self: ModuleInstance): void {
 			text: '[TRANS]\n——\nWIPE2',
 			name: 'TRANS WIPE2',
 			actionId: 'trans_wipe2',
-			opts: { style: 0 },
+			opts: { style: firstWipeStyle },
 			fbId: 'wipe_active',
 			fbOpts: { mode: 2 },
 			flashKey: 'key:28',
@@ -327,7 +327,7 @@ export function UpdatePresets(self: ModuleInstance): void {
 			text: '[TRANS]\n——\nWIPE3',
 			name: 'TRANS WIPE3',
 			actionId: 'trans_wipe3',
-			opts: { style: 0 },
+			opts: { style: firstWipeStyle },
 			fbId: 'wipe_active',
 			fbOpts: { mode: 3 },
 			flashKey: 'key:29',
@@ -337,7 +337,7 @@ export function UpdatePresets(self: ModuleInstance): void {
 			text: '[TRANS]\n——\nWIPE4',
 			name: 'TRANS WIPE4',
 			actionId: 'trans_wipe4',
-			opts: { style: 0 },
+			opts: { style: firstWipeStyle },
 			fbId: 'wipe_active',
 			fbOpts: { mode: 4 },
 			flashKey: 'key:30',
@@ -347,7 +347,7 @@ export function UpdatePresets(self: ModuleInstance): void {
 			text: '[TRANS]\n——\nMIX',
 			name: 'TRANS MIX',
 			actionId: 'trans_effect',
-			opts: { value: TRANSITION_KEY_VALUES['MIX'] },
+			opts: { value: keys.mix },
 			fbId: 'wipe_active',
 			fbOpts: { mode: 5 },
 			flashKey: 'key:31',
@@ -357,7 +357,7 @@ export function UpdatePresets(self: ModuleInstance): void {
 			text: '[TRANS]\n——\nDIP',
 			name: 'TRANS DIP',
 			actionId: 'trans_effect',
-			opts: { value: TRANSITION_KEY_VALUES['DIP'] },
+			opts: { value: keys.dip },
 			fbId: 'wipe_active',
 			fbOpts: { mode: 6 },
 			flashKey: 'key:32',
@@ -367,7 +367,7 @@ export function UpdatePresets(self: ModuleInstance): void {
 			text: '[TRANS]\n——\nFREEZE',
 			name: 'TRANS FREEZE',
 			actionId: 'trans_effect',
-			opts: { value: TRANSITION_KEY_VALUES['FREEZE'] },
+			opts: { value: keys.freeze },
 			fbId: 'freeze_active',
 			fbOpts: {},
 			flashKey: 'key:33',
@@ -504,11 +504,13 @@ export function UpdatePresets(self: ModuleInstance): void {
 			},
 		]
 	for (const b of audioSimple) {
+		// H4K 不提供 Audio Reset：不生成预设按钮
+		if (b.actionId === 'audio_reset' && family.hideAudioResetAction) continue
 		presets[b.id] = buttonPreset(CAT_AUDIO, b.name, b.text, b.actionId, b.opts, undefined, DARK, b.actionId)
 	}
 
-	// IN1~6 × (ENABLE / VOLUME / AFV / DELAY)
-	for (const n of [1, 2, 3, 4, 5, 6]) {
+	// IN1~N × (ENABLE / VOLUME / AFV / DELAY)，N 按协议族（0617=6 / H4K=4）
+	for (let n = 1; n <= family.inputCount; n++) {
 		presets[`audio_in${n}_en`] = buttonPreset(
 			CAT_AUDIO,
 			`IN${n} Enable`,
@@ -642,5 +644,23 @@ export function UpdatePresets(self: ModuleInstance): void {
 		feedbacks: [],
 	}
 
-	self.setPresetDefinitions(presets)
+	// 剔除引用了「当前产品未注册 action」的预设（如 H4K 无 Stream / 无 XLR / 无 PIP2、PIP3）
+	const actionIds = self.getRegisteredActionIds()
+	const available: CompanionPresetDefinitions = {}
+	for (const [id, preset] of Object.entries(presets)) {
+		if (!preset) continue
+		if (!('steps' in preset) || !preset.steps) {
+			available[id] = preset
+			continue
+		}
+		const usedActionIds = (
+			preset.steps as Array<{ down?: Array<{ actionId: string }>; up?: Array<{ actionId: string }> }>
+		)
+			.flatMap((step) => [...(step.down ?? []), ...(step.up ?? [])])
+			.map((action) => action.actionId)
+		if (usedActionIds.every((actionId) => actionIds.has(actionId))) available[id] = preset
+	}
+
+	// 按当前产品档案裁剪预设（不支持的按钮随分类一起消失）
+	self.setPresetDefinitions(filterByProfile(available, self.getDeviceProfile()))
 }

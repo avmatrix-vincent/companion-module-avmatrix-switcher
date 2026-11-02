@@ -1,3 +1,5 @@
+import type { KeyPressFormat } from './devices/types.js'
+
 export interface DeviceCommand {
 	id: string
 	name: string
@@ -123,6 +125,83 @@ function buildKeyPressData(params?: Record<string, unknown>): Buffer {
 	return data
 }
 
+/**
+ * H4K 0x0010 报文（固定 8 字节，与上位机 SharkH4kProModel.async_set_keyboard 一致）：
+ *   valid(4)  ：Bit0=Key_Type Bit1=Key_Val Bit2=Key_Pos
+ *               **按实际下发的字段动态置位**（valor 为缺省值时对应位不置位）
+ *   Key_Type(1)：1=按键 2=推杆（T-Bar）
+ *   Key_Val(2) ：按键=键值；推杆 pos 模式保持缺省 0xFFFF（不置位），val 模式=0~4095
+ *   Key_Pos(1) ：推杆 pos 模式=位置百分比 0~100；其余保持缺省 0xFF
+ *
+ * 推杆下发方式（设备只认其中一种，由上层回读确认后自动切换）：
+ *   - 'val'   ：valid=0x03，只给 Key_Val（0~4095）
+ *   - 'pos'   ：valid=0x05，只给 Key_Pos（0~100 百分比）
+ *   - 'both'  ：valid=0x07，Key_Val(0~4095) + Key_Pos(档位 0底部/1中间/2顶部)
+ *               —— 与上位机 SharkH4kProModel 实测报文一致（data=00000007 02 0eb7 01）
+ *   - 'valPct'：valid=0x03，Key_Val 用百分比（0~100）
+ */
+export type TBarSendMode = 'val' | 'pos' | 'both' | 'valPct'
+
+function buildKeyPressKeyTypeData(keyType: 1 | 2, keyVal: number, tBarMode: TBarSendMode = 'pos'): Buffer {
+	const T_BAR_MAX = 4095
+	const data = Buffer.alloc(8)
+	// 缺省值（不参与置位）
+	let vKeyVal = 0xffff
+	let vKeyPos = 0xff
+
+	if (keyType === 2) {
+		const v = Math.min(Math.max(keyVal, 0), T_BAR_MAX)
+		const pct = Math.round((v * 100) / T_BAR_MAX)
+		// Key_Pos 档位：0=底部 / 1=中间 / 2=顶部（与 0x0110 上报的 T_Bar_Pos 语义一致）
+		const gear = v <= 0 ? 0 : v >= T_BAR_MAX ? 2 : 1
+		switch (tBarMode) {
+			case 'pos':
+				vKeyPos = pct
+				break
+			case 'both':
+				vKeyVal = v
+				vKeyPos = gear
+				break
+			case 'valPct':
+				vKeyVal = pct
+				break
+			default:
+				vKeyVal = v
+				break
+		}
+	} else {
+		vKeyVal = keyVal & 0xffff
+	}
+
+	// 动态置位：Key_Type 必定有效；Key_Val / Key_Pos 仅在非缺省值时置位
+	let valid = 1 << 0
+	if (vKeyVal !== 0xffff) valid |= 1 << 1
+	if (vKeyPos !== 0xff) valid |= 1 << 2
+	if (valid === 0x00) throw new Error('No valid key data to set')
+
+	data.writeUInt32BE(valid >>> 0, 0)
+	data.writeUInt8(keyType & 0xff, 4)
+	data.writeUInt16BE(vKeyVal & 0xffff, 5)
+	data.writeUInt8(vKeyPos & 0xff, 7)
+	return data
+}
+
+function buildKeyPressDataKeyType(params?: Record<string, unknown>): Buffer {
+	// 推杆优先：带 tBarVal 时一律按 Key_type=2 发送，不能当成按键值
+	const tBarVal = params?.tBarVal as number | undefined
+	const tBarMode = (params?.tBarMode as TBarSendMode | undefined) ?? 'pos'
+	if (tBarVal !== undefined && tBarVal !== 0xffff) {
+		return buildKeyPressKeyTypeData(2, tBarVal, tBarMode)
+	}
+
+	const keyVal = params?.keyVal as number | undefined
+	if (keyVal !== undefined && keyVal !== 0xffff) {
+		return buildKeyPressKeyTypeData(1, keyVal)
+	}
+
+	throw new Error('No valid key data to set')
+}
+
 export const DeviceCommands: Record<string, DeviceCommand> = {
 	// 按键控制指令（PGM/PVW切换等）
 	KEY_PRESS: {
@@ -165,6 +244,7 @@ export function parseDeviceResponse(
 	cmd?: number,
 	session?: number,
 	rawBuffer?: Buffer,
+	options?: { legacyPowerCommands?: boolean },
 ): DeviceResponse {
 	const response: DeviceResponse = {
 		raw: rawData,
@@ -189,13 +269,14 @@ export function parseDeviceResponse(
 		return response
 	}
 
-	// 电源响应
-	if (cmd === 0x0001) {
+	// 电源响应（仅 0617 / 0605 语义；H4K 的 0x0001/0x0002 是版本号/输入信息）
+	const legacyPower = options?.legacyPowerCommands !== false
+	if (legacyPower && cmd === 0x0001) {
 		response.type = 'power_on'
 		response.data = { power: true }
 		return response
 	}
-	if (cmd === 0x0002) {
+	if (legacyPower && cmd === 0x0002) {
 		response.type = 'power_off'
 		response.data = { power: false }
 		return response
@@ -249,7 +330,17 @@ export function handleDeviceResponse(
 	}
 }
 
-export function buildCommand(commandId: string, params?: Record<string, unknown>): { cmd: number; data: Buffer } {
+export function buildCommand(
+	commandId: string,
+	params?: Record<string, unknown>,
+	options?: { keyPressFormat?: KeyPressFormat },
+): { cmd: number; data: Buffer } {
+	// 按键指令：Data 结构按协议族区分
+	if (commandId === 'KEY_PRESS') {
+		const data = options?.keyPressFormat === 'keytype' ? buildKeyPressDataKeyType(params) : buildKeyPressData(params)
+		return { cmd: 0x0010, data }
+	}
+
 	const command = DeviceCommands[commandId]
 	if (!command) {
 		return { cmd: 0x0001, data: Buffer.alloc(0) }
