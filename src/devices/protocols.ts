@@ -1,7 +1,7 @@
 import { H4K_PROTOCOL_COMMANDS, PROTOCOL_COMMANDS } from '../features.js'
 import type { KeyMap, ProtocolFamily, ProtocolFamilyId, StateReportSpec } from './types.js'
 
-/** 0617 0x0110：PGM/PVW/WIPE/SPEED/FTB/Freeze(6B) + T_Bar_val(2B) + b_bar_pos(2B) = 10B */
+/** 0617 0x0110: PGM/PVW/WIPE/SPEED/FTB/Freeze(6B) + T_Bar_val(2B) + b_bar_pos(2B) = 10B */
 const CCP_0617_STATE_REPORT: StateReportSpec = {
 	size: 10,
 	pgm: 0,
@@ -14,7 +14,7 @@ const CCP_0617_STATE_REPORT: StateReportSpec = {
 	bBarPos: { offset: 8, size: 2 },
 }
 
-/** H4K 0x0110：PGM/PVW/WIPE/SPEED/FTB/Freeze(6B) + T_Bar_Pos(1B) + T_Bar_Val(2B) = 9B */
+/** H4K 0x0110: PGM/PVW/WIPE/SPEED/FTB/Freeze(6B) + T_Bar_Pos(1B) + T_Bar_Val(2B) = 9B */
 const H4K_STATE_REPORT: StateReportSpec = {
 	size: 9,
 	pgm: 0,
@@ -27,7 +27,7 @@ const H4K_STATE_REPORT: StateReportSpec = {
 	tBarValue: { offset: 7, size: 2 },
 }
 
-/** 0617 键源：0=BLACK，1~6=IN1~6，7=Color Bar */
+/** 0617 key sources: 0=BLACK, 1~6=IN1~6, 7=Color Bar */
 const CCP_0617_KEY_SOURCES = [
 	{ id: 0, label: 'BLACK' },
 	{ id: 1, label: 'IN1' },
@@ -39,7 +39,7 @@ const CCP_0617_KEY_SOURCES = [
 	{ id: 7, label: 'Color Bar' },
 ]
 
-/** 0617 PIP 源：0=BLACK，1~6=IN1~6，7=Color Bar，8/9=Color1/2，10/11=PAT1/2 */
+/** 0617 PIP sources: 0=BLACK, 1~6=IN1~6, 7=Color Bar, 8/9=Color1/2, 10/11=PAT1/2 */
 const CCP_0617_PIP_SOURCES = [
 	...CCP_0617_KEY_SOURCES,
 	{ id: 8, label: 'Color 1' },
@@ -48,7 +48,7 @@ const CCP_0617_PIP_SOURCES = [
 	{ id: 11, label: 'PAT2' },
 ]
 
-/** H4K 键源：0=IN1，1=IN2，2=IN3，3=IN4（见协议文档 3.1.6~3.1.9） */
+/** H4K key sources: 0=IN1, 1=IN2, 2=IN3, 3=IN4 (see protocol doc 3.1.6~3.1.9) */
 const H4K_KEY_SOURCES = [
 	{ id: 0, label: 'IN1' },
 	{ id: 1, label: 'IN2' },
@@ -56,13 +56,13 @@ const H4K_KEY_SOURCES = [
 	{ id: 3, label: 'IN4' },
 ]
 
-/** H4K PIP 源：0=IN1，1=IN2，2=IN3，3=IN4（见协议文档 3.1.8） */
+/** H4K PIP sources: 0=IN1, 1=IN2, 2=IN3, 3=IN4 (see protocol doc 3.1.8) */
 const H4K_PIP_SOURCES = [...H4K_KEY_SOURCES]
 
-/** 0617 WIPE 样式：0~10 */
+/** 0617 wipe styles: 0~10 */
 const CCP_0617_WIPE_STYLES = Array.from({ length: 11 }, (_, n) => ({ id: n, label: `Wipe Style ${n}` }))
 
-/** H4K WIPE 样式：0~27（共 28 种，实测设备可选项，按文档 3.1.4 KEY_PATTERN_* 顺序） */
+/** H4K wipe styles: 0~27 (28 patterns measured on the device, in 3.1.4 KEY_PATTERN_* order) */
 const H4K_WIPE_NAMES = [
 	'FULL_RECT_H',
 	'FULL_RECT_V',
@@ -93,10 +93,10 @@ const H4K_WIPE_NAMES = [
 	'X',
 	'DIAMOND',
 ]
-// 下拉 id 与协议一致，直接 0~27（下发值 = id，无需偏移）；label 前置 id 便于核对
+// Dropdown ids match the protocol (0~27, sent value = id, no offset); the id is prefixed to the label for verification
 const H4K_WIPE_STYLES = H4K_WIPE_NAMES.map((label, n) => ({ id: n, label: `${n}: ${label}` }))
 
-/** 0617 / PSV0617（SHARK S6 PLUS）按键值表 */
+/** 0617 / PSV0617 (SHARK S6 PLUS) key value table */
 const CCP_0617_KEY_MAP: KeyMap = {
 	pgm: [1, 2, 3, 4, 5, 6],
 	pvw: [9, 10, 11, 12, 13, 14],
@@ -127,7 +127,7 @@ const CCP_0617_KEY_MAP: KeyMap = {
 	fKeys: [34, 35, 36, 37, 38, 39],
 }
 
-/** H4K（VS0405E / VS0405EH，即 SHARK S5 / H5）按键值表，见协议文档 3.1.3 */
+/** SHARK H4K key value table (see protocol doc 3.1.3) */
 const H4K_KEY_MAP: KeyMap = {
 	pgm: [1, 2, 3, 4],
 	pvw: [7, 8, 9, 10],
@@ -139,10 +139,10 @@ const H4K_KEY_MAP: KeyMap = {
 	mute: 16,
 	speed1: 17,
 	speed2: 18,
-	stream: [], // H4K 无 Stream 按键/指令
+	stream: [], // H4K has no Stream keys/commands
 	wipe: [29, 30, 31],
 	mix: 32,
-	dip: 33, // 文档中 33=INV，作为 DIP/反向键使用
+	dip: 33, // Doc: 33=INV, used here as the DIP/reverse key
 	flipFlop: 34,
 	freeze: 35,
 	chroma: 19,
@@ -159,14 +159,14 @@ const H4K_KEY_MAP: KeyMap = {
 }
 
 /**
- * 协议族注册表
- * - avm-0617：PSV0617 / VS0617（SHARK S6 PLUS）、VS0405E / VS0405EH（SHARK S5 / H5）
- *   三者协议与功能集一致：Param_Vaild=字段索引，6 路源 / 3 路 PIP / 4 WIPE / 有 Stream
- * - avm-h4k ：SHARK H4K / SHARK H4K PLUS（Dev_Type 0x06/0x07/0x08），
- *   Param_Vaild=位域，4 路源 / 1 路 PIP / 3 WIPE / 无 Stream
- * - avm-0605：VS0605（SHARK S6）的独立协议
- *   TODO：拿到 VS0605 独立协议文档后，在此替换为 0605 专属命令表。
- *         当前克隆一份 0617 命令表，保证 S6 现有功能行为不变，且不与 0617 共享对象。
+ * Protocol family registry.
+ * - avm-0617: PSV0617 / VS0617 (SHARK S6 PLUS), VS0405E / VS0405EH (SHARK S5 / H5)
+ *   Same protocol and feature set: Param_Vaild = field index, 6 sources / 3 PIP / 4 wipes / stream
+ * - avm-h4k : SHARK H4K / SHARK H4K PLUS (Dev_Type 0x06/0x07/0x08),
+ *   Param_Vaild = bitmask, 4 sources / 1 PIP / 3 wipes / no stream
+ * - avm-0605: standalone protocol of VS0605 (SHARK S6)
+ *   TODO: replace with the dedicated 0605 command table once its protocol doc is available.
+ *         For now it clones the 0617 table, so S6 behaviour is unchanged and shares no objects with 0617.
  */
 export const PROTOCOL_FAMILIES: Record<ProtocolFamilyId, ProtocolFamily> = {
 	'avm-0617': {
@@ -200,33 +200,33 @@ export const PROTOCOL_FAMILIES: Record<ProtocolFamilyId, ProtocolFamily> = {
 		logoCount: 2,
 		hasStream: false,
 		stateReport: H4K_STATE_REPORT,
-		tBarMax: 4095, // 推杆数据 0~4095
-		// H4K 无 0xEEEE 心跳指令，改用 0x0001（读版本号）作为在线探测
+		tBarMax: 4095, // T-Bar data 0~4095
+		// H4K has no 0xEEEE heartbeat; 0x0001 (read version) is used as the liveness probe
 		probeCommand: 0x0001,
-		// 0x0001/0x0002 在 H4K 中是版本号/输入信息，不是电源指令
+		// On H4K, 0x0001/0x0002 are version/input info, not power commands
 		legacyPowerCommands: false,
 		keySources: H4K_KEY_SOURCES,
 		pipSources: H4K_PIP_SOURCES,
 		wipeStyles: H4K_WIPE_STYLES,
-		// WIPE 样式：下拉 0~27 即设备样式值，0 = 第一张图（下发值 = id，不做偏移）
+		// Wipe styles: dropdown 0~27 is the device style value, 0 = first pattern (sent value = id, no offset)
 		wipeStyleOffset: 0,
 		mergeWipeStyleAction: true,
-		// H4K 无 ALL AFV 功能：不注册对应动作/预设（协议字段 AllAfv 仍保留在布局中）
+		// H4K has no All AFV: do not register the action/preset (the AllAfv field stays in the layout)
 		hideAllAfvAction: true,
-		// H4K 不提供音频整体 Reset：不注册对应动作/预设（协议字段 Reset 仍保留在布局中）
+		// H4K has no global audio reset: do not register the action/preset (the Reset field stays in the layout)
 		hideAudioResetAction: true,
-		// 推杆：按上位机 SharkH4kProModel 实测报文 —— valid=0x07，Key_type=2，
-		// Key_Val=推杆数据(0~4095)，Key_Pos=档位(0底部/1中间/2顶部)
+		// T-Bar: measured from the host app SharkH4kProModel - valid=0x07, Key_type=2,
+		// Key_Val = T-Bar data (0~4095), Key_Pos = gear (0 bottom / 1 middle / 2 top)
 		tBarSendMode: 'both',
-		// 0x0110 上报 PGM/PVW/推杆状态；连接后把所有带获取码的指令全查一遍
+		// 0x0110 reports PGM/PVW/T-Bar; query every command with a get code after connecting
 		queryAllOnConnect: true,
-		// 处理 Pack_Type=1 的查询应答（H4K 的 0x0110 等只用应答回包，无主动上报）
+		// Handle Pack_Type=1 query replies (H4K 0x0110 only answers queries, it has no active reports)
 		parseQueryReplies: true,
 		stateQueryKeys: ['state', 'transition', 'luma', 'chroma', 'pip1', 'dsk', 'logo', 'audio'],
 	},
 	'avm-0605': {
 		id: 'avm-0605',
-		displayName: 'AVM CCP (0605 独立协议)',
+		displayName: 'AVM CCP (0605 standalone protocol)',
 		commands: { ...PROTOCOL_COMMANDS },
 		paramValidMode: 'index',
 		keyPressFormat: 'index',

@@ -3,14 +3,14 @@ import { CompanionPresetDefinitions, CompanionButtonPresetDefinition, combineRgb
 import { filterByProfile } from './devices/index.js'
 import { flashKeyFor } from './commandHandler.js'
 
-// 底色黑：仅“当前源”命中 pgm_active/pvw_active 反馈时才变红/绿（未收到状态时全为黑）
+// Black background: a button only turns red/green when its source matches pgm_active/pvw_active (black until state arrives)
 const PGM_BG = combineRgb(0, 0, 0)
 const PVW_BG = combineRgb(0, 0, 0)
 const DARK = combineRgb(0, 0, 0)
 const WHITE = combineRgb(255, 255, 255)
 
-// 分组名用“零宽空格”前缀控序（不可见，不显示序号）；
-// Companion 1.x 按分组名字符串排序，前缀数量递增即可控制先后。
+// Category names are ordered with zero-width-space prefixes (invisible, no numbers shown);
+// Companion 1.x sorts categories as strings, so a longer prefix moves a group later.
 const ZW = '\u200b'
 const CAT_PGM = `${ZW}PGM`
 const CAT_PVW = `${ZW}${ZW}PVW`
@@ -24,20 +24,20 @@ const CAT_TRANS = `${ZW.repeat(11)}TRANSITIONS`
 const CAT_AUDIO = `${ZW.repeat(12)}Audio Setting`
 const CAT_TBAR = `${ZW.repeat(13)}TBAR`
 
-// 反馈样式：必须随 preset 的 feedback 条目一起提供（CompanionPresetFeedback.style），否则按钮不会应用该样式
+// Feedback styles must be provided next to the preset feedback entry (CompanionPresetFeedback.style), otherwise the button ignores them
 const STYLE_RED = { bgcolor: combineRgb(204, 0, 0), color: combineRgb(255, 255, 255) }
 const STYLE_GREEN = { bgcolor: combineRgb(0, 153, 0), color: combineRgb(255, 255, 255) }
 const STYLE_YELLOW = { bgcolor: combineRgb(255, 200, 0), color: combineRgb(255, 255, 255) }
 const STYLE_GREY = { bgcolor: combineRgb(80, 80, 80), color: combineRgb(255, 255, 255) }
 const STYLE_FLASH = { bgcolor: combineRgb(255, 140, 0), color: combineRgb(0, 0, 0) }
 
-/** 生成一个按钮 preset */
+/** Build one button preset */
 function buttonPreset(
 	category: string,
 	name: string,
 	text: string,
 	actionId: string,
-	actionOptions: Record<string, number>,
+	actionOptions: Record<string, number | string>,
 	feedback?: { feedbackId: string; options: Record<string, number>; style?: Record<string, number> },
 	bgcolor: number = DARK,
 	flashKey?: string,
@@ -67,34 +67,38 @@ function buttonPreset(
 }
 
 /**
- * Presets：菜单树结构（category 即树节点）
- *   PGM/PVW : 源 1~6 + PATTERN1/2（当前源 → 红/绿）
+ * Presets: menu tree (the category is the tree node)
+ *   PGM/PVW : sources 1~N + PATTERN1/2 (current source -> red/green)
  *   Switch or Streams : Stream1~3 + CUT/AUTO/FTB/MUTE
- *   PIP1~3 / LUMA / CHROMA / DSK / LOGO : 状态四键（KEY/ON AIR/KEY&ON AIR/OFF）
+ *   PIP1~3 / LUMA / CHROMA / DSK / LOGO : four status keys (KEY/ON AIR/KEY&ON AIR/OFF)
  *   TRANSITIONS : WIPE1~4 / MIX / DIP / NORMAL / INV / FLIP-FLOP
  */
 export function UpdatePresets(self: ModuleInstance): void {
 	const presets: CompanionPresetDefinitions = {}
-	// 路数与键值按协议族决定（0617：6 路源 / 3 路 PIP / 4 WIPE；H4K：4 路源 / 1 路 PIP / 3 WIPE）
+	// Counts and key values follow the protocol family (0617: 6 sources / 3 PIP / 4 wipes; H4K: 4 / 1 / 3)
 	const family = self.getProtocolFamilyInfo()
 	const keys = family.keyMap
-	// WIPE 样式下拉首项 id（第一个图，固定 0；不能拿 wipeStyleOffset 当首项，那是下发偏移）
+	// First wipe style id (the first pattern, fixed 0; wipeStyleOffset is a send offset, not a first id)
 	const firstWipeStyle = family.wipeStyles?.[0]?.id ?? 0
+	// L3: preset defaults must follow the active protocol (H4K PIP/key sources are 0-based)
+	const isH4K = family.id === 'avm-h4k'
+	const defaultPipSource = family.pipSources?.find((s) => s.label === 'IN1')?.id ?? family.pipSources?.[0]?.id ?? 0
 
-	// ===== PGM 组（当前源 → 红色） =====
-	keys.pgm.forEach((keyVal, i) => {
+	// ===== PGM group (current source -> red) =====
+	keys.pgm.forEach((_, i) => {
 		const label = `PGM${i + 1}`
 		presets[`pgm_${label.toLowerCase()}`] = buttonPreset(
 			CAT_PGM,
 			label,
 			label,
 			'set_source',
-			{ source: keyVal },
+			// M2: device-independent key id, resolved against the active protocol when pressed
+			{ source: `pgm${i + 1}` },
 			{ feedbackId: 'pgm_active', options: { source: i + 1 }, style: STYLE_RED },
 			PGM_BG,
 		)
 	})
-	keys.pgmPattern.forEach((keyVal, i) => {
+	keys.pgmPattern.forEach((_, i) => {
 		const label = `PGM_PATTERN${i + 1}`
 		const displayLabel = `PATTERN${i + 1}`
 		const disp = i === 0 ? 0xf0 : 0xf1
@@ -103,26 +107,26 @@ export function UpdatePresets(self: ModuleInstance): void {
 			displayLabel,
 			displayLabel,
 			'set_source',
-			{ source: keyVal },
+			{ source: `pgm_pattern${i + 1}` },
 			{ feedbackId: 'pgm_active', options: { source: disp }, style: STYLE_RED },
 			PGM_BG,
 		)
 	})
 
-	// ===== PVW 组（当前源 → 绿色） =====
-	keys.pvw.forEach((keyVal, i) => {
+	// ===== PVW group (current source -> green) =====
+	keys.pvw.forEach((_, i) => {
 		const label = `PVW${i + 1}`
 		presets[`pvw_${label.toLowerCase()}`] = buttonPreset(
 			CAT_PVW,
 			label,
 			label,
 			'set_source',
-			{ source: keyVal },
+			{ source: `pvw${i + 1}` },
 			{ feedbackId: 'pvw_active', options: { source: i + 1 }, style: STYLE_GREEN },
 			PVW_BG,
 		)
 	})
-	keys.pvwPattern.forEach((keyVal, i) => {
+	keys.pvwPattern.forEach((_, i) => {
 		const label = `PVW_PATTERN${i + 1}`
 		const displayLabel = `PATTERN${i + 1}`
 		const disp = i === 0 ? 0xf0 : 0xf1
@@ -131,18 +135,18 @@ export function UpdatePresets(self: ModuleInstance): void {
 			displayLabel,
 			displayLabel,
 			'set_source',
-			{ source: keyVal },
+			{ source: `pvw_pattern${i + 1}` },
 			{ feedbackId: 'pvw_active', options: { source: disp }, style: STYLE_GREEN },
 			PVW_BG,
 		)
 	})
 
-	// ===== Switch 组（Stream 1/2/3 + CUT/AUTO/FTB/MUTE） =====
+	// ===== Switch group (Stream 1/2/3 + CUT/AUTO/FTB/MUTE) =====
 	const switchButtons: Array<{
 		id: string
 		label: string
 		actionId: string
-		value: number
+		value: string
 		fbId?: string
 		fbOpts?: Record<string, number>
 		fbStyle?: Record<string, number>
@@ -151,7 +155,7 @@ export function UpdatePresets(self: ModuleInstance): void {
 			id: 'stream1',
 			label: 'Stream 1',
 			actionId: 'switch_stream',
-			value: keys.stream[0] ?? 0,
+			value: 'stream1',
 			fbId: 'stream_active',
 			fbOpts: { stream: 1 },
 			fbStyle: STYLE_YELLOW,
@@ -160,7 +164,7 @@ export function UpdatePresets(self: ModuleInstance): void {
 			id: 'stream2',
 			label: 'Stream 2',
 			actionId: 'switch_stream',
-			value: keys.stream[1] ?? 0,
+			value: 'stream2',
 			fbId: 'stream_active',
 			fbOpts: { stream: 2 },
 			fbStyle: STYLE_YELLOW,
@@ -169,17 +173,17 @@ export function UpdatePresets(self: ModuleInstance): void {
 			id: 'stream3',
 			label: 'Stream 3',
 			actionId: 'switch_stream',
-			value: keys.stream[2] ?? 0,
+			value: 'stream3',
 			fbId: 'stream_active',
 			fbOpts: { stream: 3 },
 			fbStyle: STYLE_YELLOW,
 		},
-		{ id: 'cut', label: 'CUT', actionId: 'switch_transition', value: keys.cut },
+		{ id: 'cut', label: 'CUT', actionId: 'switch_transition', value: 'cut' },
 		{
 			id: 'auto',
 			label: 'AUTO',
 			actionId: 'switch_transition',
-			value: keys.auto,
+			value: 'auto',
 			fbId: 'auto_active',
 			fbOpts: {},
 			fbStyle: STYLE_RED,
@@ -188,7 +192,7 @@ export function UpdatePresets(self: ModuleInstance): void {
 			id: 'ftb',
 			label: 'FTB',
 			actionId: 'switch_transition',
-			value: keys.ftb,
+			value: 'ftb',
 			fbId: 'ftb_active',
 			fbOpts: {},
 			fbStyle: STYLE_RED,
@@ -197,7 +201,7 @@ export function UpdatePresets(self: ModuleInstance): void {
 			id: 'mute',
 			label: 'MUTE',
 			actionId: 'switch_transition',
-			value: keys.mute,
+			value: 'mute',
 			fbId: 'mute_active',
 			fbOpts: {},
 			fbStyle: STYLE_RED,
@@ -216,7 +220,7 @@ export function UpdatePresets(self: ModuleInstance): void {
 		)
 	}
 
-	// ===== 状态四键（KEY / ON AIR / KEY&ON AIR / OFF）—— PIP/LUMA/CHROMA/DSK/LOGO 通用 =====
+	// ===== Four status keys (KEY / ON AIR / KEY&ON AIR / OFF) - shared by PIP/LUMA/CHROMA/DSK/LOGO =====
 	const statusGroup = (category: string, tag: string, actionId: string, prefix: string, fbId: string): void => {
 		const rows: Array<[string, string, number, Record<string, number>]> = [
 			[`${prefix}_key`, 'KEY', 1, STYLE_GREEN],
@@ -236,37 +240,38 @@ export function UpdatePresets(self: ModuleInstance): void {
 		}
 	}
 
-	// PIP1 / PIP2 / PIP3（状态四键 + Adjust）
+	// PIP1 / PIP2 / PIP3 (four status keys + Adjust)
 	statusGroup(catPip(1), 'PIP1', 'pip1_status', 'pip1', 'pip1_status_active')
 	presets['pip1_adjust'] = buttonPreset(catPip(1), 'PIP1 Adjust', '[PIP1]\n——\nADJUST', 'pip1_adjust', {
-		source: 1,
+		source: defaultPipSource,
 		size: 100,
 		posx: 50,
 		posy: 50,
 	})
 	statusGroup(catPip(2), 'PIP2', 'pip2_status', 'pip2', 'pip2_status_active')
 	presets['pip2_adjust'] = buttonPreset(catPip(2), 'PIP2 Adjust', '[PIP2]\n——\nADJUST', 'pip2_adjust', {
-		source: 1,
+		source: defaultPipSource,
 		size: 100,
 		posx: 50,
 		posy: 50,
 	})
 	statusGroup(catPip(3), 'PIP3', 'pip3_status', 'pip3', 'pip3_status_active')
 	presets['pip3_adjust'] = buttonPreset(catPip(3), 'PIP3 Adjust', '[PIP3]\n——\nADJUST', 'pip3_adjust', {
-		source: 1,
+		source: defaultPipSource,
 		size: 100,
 		posx: 50,
 		posy: 50,
 	})
 
-	// LUMA / CHROMA / DSK / LOGO（状态四键；各自另加 Adjust）
+	// LUMA / CHROMA / DSK / LOGO (four status keys; each also gets an Adjust button)
 	statusGroup(CAT_LUMA, 'LUMA', 'luma_status', 'luma', 'luma_status_active')
 	presets['luma_adjust'] = buttonPreset(CAT_LUMA, 'LUMA Adjust', '[LUMA]\n——\nADJUST', 'luma_adjust', {
 		size: 100,
 		posx: 50,
 		posy: 50,
-		clip: 50,
-		gain: 50,
+		// L3: H4K Clip is a dropdown (Off/On/Curve); 0617 uses a 0-100 slider
+		clip: isH4K ? 0 : 50,
+		...(isH4K ? {} : { gain: 50 }),
 	})
 	statusGroup(CAT_CHROMA, 'CHROMA', 'chroma_status', 'chroma', 'chroma_status_active')
 	presets['chroma_adjust'] = buttonPreset(CAT_CHROMA, 'CHROMA Adjust', '[CHROMA]\n——\nADJUST', 'chroma_adjust', {
@@ -291,16 +296,15 @@ export function UpdatePresets(self: ModuleInstance): void {
 		opacity: 100,
 	})
 
-	// ===== TRANSITIONS 组（WIPE1~4 / MIX / DIP / NORMAL / INV / FLIP-FLOP） =====
+	// ===== TRANSITIONS group (WIPE1~4 / MIX / DIP / NORMAL / INV / FLIP-FLOP) =====
 	const transButtons: Array<{
 		id: string
 		text: string
 		name: string
 		actionId: string
-		opts: Record<string, number>
+		opts: Record<string, number | string>
 		fbId?: string
 		fbOpts?: Record<string, number>
-		flashKey: string
 	}> = [
 		{
 			id: 'trans_wipe1',
@@ -310,7 +314,6 @@ export function UpdatePresets(self: ModuleInstance): void {
 			opts: { style: firstWipeStyle },
 			fbId: 'wipe_active',
 			fbOpts: { mode: 1 },
-			flashKey: 'key:27',
 		},
 		{
 			id: 'trans_wipe2',
@@ -320,7 +323,6 @@ export function UpdatePresets(self: ModuleInstance): void {
 			opts: { style: firstWipeStyle },
 			fbId: 'wipe_active',
 			fbOpts: { mode: 2 },
-			flashKey: 'key:28',
 		},
 		{
 			id: 'trans_wipe3',
@@ -330,7 +332,6 @@ export function UpdatePresets(self: ModuleInstance): void {
 			opts: { style: firstWipeStyle },
 			fbId: 'wipe_active',
 			fbOpts: { mode: 3 },
-			flashKey: 'key:29',
 		},
 		{
 			id: 'trans_wipe4',
@@ -340,37 +341,33 @@ export function UpdatePresets(self: ModuleInstance): void {
 			opts: { style: firstWipeStyle },
 			fbId: 'wipe_active',
 			fbOpts: { mode: 4 },
-			flashKey: 'key:30',
 		},
 		{
 			id: 'trans_mix',
 			text: '[TRANS]\n——\nMIX',
 			name: 'TRANS MIX',
 			actionId: 'trans_effect',
-			opts: { value: keys.mix },
+			opts: { value: 'mix' },
 			fbId: 'wipe_active',
 			fbOpts: { mode: 5 },
-			flashKey: 'key:31',
 		},
 		{
 			id: 'trans_dip',
 			text: '[TRANS]\n——\nDIP',
 			name: 'TRANS DIP',
 			actionId: 'trans_effect',
-			opts: { value: keys.dip },
+			opts: { value: 'dip' },
 			fbId: 'wipe_active',
 			fbOpts: { mode: 6 },
-			flashKey: 'key:32',
 		},
 		{
 			id: 'trans_freeze',
 			text: '[TRANS]\n——\nFREEZE',
 			name: 'TRANS FREEZE',
 			actionId: 'trans_effect',
-			opts: { value: keys.freeze },
+			opts: { value: 'freeze' },
 			fbId: 'freeze_active',
 			fbOpts: {},
-			flashKey: 'key:33',
 		},
 		{
 			id: 'trans_normal',
@@ -378,7 +375,6 @@ export function UpdatePresets(self: ModuleInstance): void {
 			name: 'TRANS NORMAL',
 			actionId: 'trans_direction',
 			opts: { value: 0 },
-			flashKey: 'set:transition',
 		},
 		{
 			id: 'trans_inv',
@@ -386,7 +382,6 @@ export function UpdatePresets(self: ModuleInstance): void {
 			name: 'TRANS INV',
 			actionId: 'trans_direction',
 			opts: { value: 1 },
-			flashKey: 'set:transition',
 		},
 		{
 			id: 'trans_flipflop',
@@ -394,7 +389,6 @@ export function UpdatePresets(self: ModuleInstance): void {
 			name: 'TRANS FLIP-FLOP',
 			actionId: 'trans_direction',
 			opts: { value: 2 },
-			flashKey: 'set:transition',
 		},
 	]
 	for (const b of transButtons) {
@@ -412,8 +406,8 @@ export function UpdatePresets(self: ModuleInstance): void {
 		)
 	}
 
-	// ===== Audio Setting 组（每个按钮只控制一个功能） =====
-	// 无通道的单键 / 单开关 / 单滑块
+	// ===== Audio Setting group (one button per function) =====
+	// Simple keys / toggles / sliders without a channel
 	const audioSimple: Array<{ id: string; text: string; name: string; actionId: string; opts: Record<string, number> }> =
 		[
 			{
@@ -504,12 +498,12 @@ export function UpdatePresets(self: ModuleInstance): void {
 			},
 		]
 	for (const b of audioSimple) {
-		// H4K 不提供 Audio Reset：不生成预设按钮
+		// H4K has no Audio Reset: do not create the preset button
 		if (b.actionId === 'audio_reset' && family.hideAudioResetAction) continue
 		presets[b.id] = buttonPreset(CAT_AUDIO, b.name, b.text, b.actionId, b.opts, undefined, DARK, b.actionId)
 	}
 
-	// IN1~N × (ENABLE / VOLUME / AFV / DELAY)，N 按协议族（0617=6 / H4K=4）
+	// IN1~N x (ENABLE / VOLUME / AFV / DELAY), N follows the protocol family (0617=6 / H4K=4)
 	for (let n = 1; n <= family.inputCount; n++) {
 		presets[`audio_in${n}_en`] = buttonPreset(
 			CAT_AUDIO,
@@ -575,15 +569,15 @@ export function UpdatePresets(self: ModuleInstance): void {
 			DARK,
 			'audio_mic_guitar',
 		)
-		presets[`audio_mic${n}_pregate`] = buttonPreset(
+		presets[`audio_mic${n}_pregain`] = buttonPreset(
 			CAT_AUDIO,
 			`MIC${n} Pre-Gain`,
 			`[MIC${n}]\nPRE-GAIN`,
-			'audio_mic_pregate',
+			'audio_mic_pregain',
 			{ channel: n, value: 0 },
 			undefined,
 			DARK,
-			'audio_mic_pregate',
+			'audio_mic_pregain',
 		)
 		presets[`audio_mic${n}_vol`] = buttonPreset(
 			CAT_AUDIO,
@@ -607,7 +601,7 @@ export function UpdatePresets(self: ModuleInstance): void {
 		)
 	}
 
-	// ===== TBAR 组（+ / -） =====
+	// ===== TBAR group (+ / -) =====
 	presets['tbar_up'] = buttonPreset(
 		CAT_TBAR,
 		'T-Bar +',
@@ -628,7 +622,7 @@ export function UpdatePresets(self: ModuleInstance): void {
 		DARK,
 		'tbar_move',
 	)
-	// 只显示当前值（无动作），文本绑定变量 tbar_value
+	// Shows the current value only (no action); the text is bound to the tbar_value variable
 	presets['tbar_display'] = {
 		type: 'button',
 		category: CAT_TBAR,
@@ -644,7 +638,7 @@ export function UpdatePresets(self: ModuleInstance): void {
 		feedbacks: [],
 	}
 
-	// 剔除引用了「当前产品未注册 action」的预设（如 H4K 无 Stream / 无 XLR / 无 PIP2、PIP3）
+	// Drop presets that reference an action not registered for this product (e.g. H4K has no Stream / XLR / PIP2 / PIP3)
 	const actionIds = self.getRegisteredActionIds()
 	const available: CompanionPresetDefinitions = {}
 	for (const [id, preset] of Object.entries(presets)) {
@@ -661,6 +655,6 @@ export function UpdatePresets(self: ModuleInstance): void {
 		if (usedActionIds.every((actionId) => actionIds.has(actionId))) available[id] = preset
 	}
 
-	// 按当前产品档案裁剪预设（不支持的按钮随分类一起消失）
+	// Filter presets by the current product profile (unsupported buttons disappear with their category)
 	self.setPresetDefinitions(filterByProfile(available, self.getDeviceProfile()))
 }

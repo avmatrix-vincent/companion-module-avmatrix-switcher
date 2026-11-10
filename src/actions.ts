@@ -7,29 +7,94 @@ import {
 import { isIdEnabled } from './devices/index.js'
 import { flashKeyFor } from './commandHandler.js'
 
-/** Adjust 动作的选项类型（滑块 + 下拉） */
+/** Option types used by Adjust actions (slider + dropdown) */
 type AdjustOption = CompanionInputFieldNumber | CompanionInputFieldDropdown
 
 /**
- * 判断当前协议是否包含某命令的全部字段。
- * 例：H4K 的 LUMA 没有 FillSource/Invert，依赖这些字段的动作就不注册。
+ * Whether the current protocol command has all of the given fields.
+ * Example: H4K LUMA has no FillSource/Invert, so actions depending on them are not registered.
  */
 function supports(self: ModuleInstance, cmdKey: string, ...fields: string[]): boolean {
 	return fields.every((f) => self.hasField(cmdKey, f))
 }
 
-/** 当前协议的键源 / PIP 源下拉项（各协议枚举起点不同） */
+/** Key-source / PIP-source dropdown items of the current protocol (enumeration start differs) */
 const keySourcesOf = (self: ModuleInstance) => self.getProtocolFamilyInfo().keySources
 const pipSourcesOf = (self: ModuleInstance) => self.getProtocolFamilyInfo().pipSources
 
-/** 取源下拉默认值（IN1 对应的 id） */
+/** Default source value (the id of IN1) */
 function defaultSourceId(sources: Array<{ id: number; label: string }>): number {
 	return sources.find((s) => s.label === 'IN1')?.id ?? sources[0]?.id ?? 0
 }
 
-// ==================== 共用选项 ====================
+/**
+ * Resolve a device-independent key id ("pgm1", "cut", "stream2", "pip_on_air") to the
+ * key value of the active protocol.
+ *
+ * M2: action options store these ids instead of raw key values, so a button keeps
+ * pressing the same logical key after the device profile changes.
+ */
+function resolveKeyId(self: ModuleInstance, id: unknown): number | undefined {
+	const keys = self.getProtocolFamilyInfo().keyMap
+	if (typeof id !== 'string' || id === '') return undefined
+	const raw = id
+	const numbered = /^(pgm_pattern|pvw_pattern|pgm|pvw|stream|wipe)_?(\d+)$/.exec(raw)
+	if (numbered) {
+		const index = Number(numbered[2]) - 1
+		if (index < 0) return undefined
+		switch (numbered[1]) {
+			case 'pgm':
+				return keys.pgm[index]
+			case 'pvw':
+				return keys.pvw[index]
+			case 'pgm_pattern':
+				return keys.pgmPattern[index]
+			case 'pvw_pattern':
+				return keys.pvwPattern[index]
+			case 'stream':
+				return keys.stream[index]
+			case 'wipe':
+				return keys.wipe[index]
+		}
+	}
+	switch (raw) {
+		case 'cut':
+			return keys.cut
+		case 'auto':
+			return keys.auto
+		case 'ftb':
+			return keys.ftb
+		case 'mute':
+			return keys.mute
+		case 'mix':
+			return keys.mix
+		case 'dip':
+			return keys.dip
+		case 'freeze':
+			return keys.freeze
+		case 'pip':
+			return keys.pip
+		case 'pip_on_air':
+			return keys.pipOnAir
+		case 'luma':
+			return keys.luma
+		case 'luma_on_air':
+			return keys.lumaOnAir
+		case 'chroma':
+			return keys.chroma
+		case 'chroma_on_air':
+			return keys.chromaOnAir
+		case 'dsk':
+			return keys.dsk
+		case 'dsk_on_air':
+			return keys.dskOnAir
+	}
+	return undefined
+}
 
-// 状态：OFF / KEY / ON AIR / KEY&ON AIR（PIP/LUMA/CHROMA/DSK/LOGO 通用）
+// ==================== Shared options ====================
+
+// Status: OFF / KEY / ON AIR / KEY&ON AIR (shared by PIP/LUMA/CHROMA/DSK/LOGO)
 const STATUS_CHOICES = [
 	{ id: 0, label: 'OFF' },
 	{ id: 1, label: 'KEY' },
@@ -43,9 +108,9 @@ const ONOFF_CHOICES = [
 	{ id: 0, label: 'OFF' },
 ]
 
-// 键源 / PIP 源的下拉项由协议族提供（见 devices/protocols.ts 的 keySources / pipSources）
+// Key-source / PIP-source dropdowns come from the protocol family (keySources / pipSources in devices/protocols.ts)
 
-// CHROMA Key Color Type（0617：0-4）
+// CHROMA Key Color Type (0617: 0-4)
 const CHROMA_KEY_TYPE_CHOICES = [
 	{ id: 0, label: 'Green' },
 	{ id: 1, label: 'Blue' },
@@ -54,36 +119,36 @@ const CHROMA_KEY_TYPE_CHOICES = [
 	{ id: 4, label: 'Fetch' },
 ]
 
-// H4K Key Color Type：只有 RED / GREEN / BLUE（0/1/2）
+// H4K Key Color Type: only RED / GREEN / BLUE (0/1/2)
 const H4K_KEY_COLOR_CHOICES = [
 	{ id: 0, label: 'Red' },
 	{ id: 1, label: 'Green' },
 	{ id: 2, label: 'Blue' },
 ]
 
-// Transition Direction（0-2）
+// Transition Direction (0-2)
 const DIRECTION_CHOICES = [
 	{ id: 0, label: 'Normal' },
 	{ id: 1, label: 'Invert' },
 	{ id: 2, label: 'Flip-Flop' },
 ]
 
-// Wipe 样式下拉由协议族提供（0617：0~10；H4K：0~27，下发值 = 下拉 id，0 = 第一张图）
+// Wipe style dropdown comes from the protocol family (0617: 0~10; H4K: 0~27, sent value = dropdown id, 0 = first pattern)
 
-/** 生成一个滑块(number)选项 */
+/** Build a number (slider) option */
 function slider(id: string, label: string, min: number, max: number, def: number): CompanionInputFieldNumber {
 	return { type: 'number', id, label: `${label} (${min}-${max})`, min, max, default: def, range: true, step: 1 }
 }
 
-/** 生成一个 ON/OFF 下拉选项 */
+/** Build an ON/OFF dropdown option */
 function onoff(id: string, label: string, def = 0) {
 	return { type: 'dropdown' as const, id, label, choices: ONOFF_CHOICES, default: def }
 }
 
 // ==================== PIP1~3 ====================
 /**
- * PIP1~3（设置指令 0x0033/0x0034/0x0035）
- * 字段：0=Status, 1=Source, 2=Size, 3=PosX, 4=PosY
+ * PIP1~3 (set commands 0x0033/0x0034/0x0035)
+ * Fields: 0=Status, 1=Source, 2=Size, 3=PosX, 4=PosY
  */
 function registerPipActions(
 	self: ModuleInstance,
@@ -92,20 +157,20 @@ function registerPipActions(
 	commandKey: string,
 ): void {
 	const tag = `PIP${n}`
-	// 状态（KEY / ON AIR / KEY&ON AIR / OFF 整合为一个下拉）
+	// Status (KEY / ON AIR / KEY&ON AIR / OFF combined into one dropdown)
 	actions[`pip${n}_status`] = {
 		name: `${tag} Status`,
 		description: `Set ${tag} status`,
 		options: [{ type: 'dropdown', id: 'status', label: 'Status', choices: STATUS_CHOICES, default: 0 }],
 		callback: async (event) => {
 			const status = Number(event.options.status)
-			// H4K：PIP / LUMA / CHROMA 互斥，先关掉其他两层（旧族直接返回）
+			// H4K: PIP / LUMA / CHROMA are mutually exclusive, so close the other layers first (old families return immediately)
 			if (status >= 1) await self.closeOtherKeys(commandKey)
 			await self.sendProtocolField(commandKey, 'Status', status, `${tag} Status`)
 			if (status >= 1) self.markKeyTypeLocal(0)
 		},
 	}
-	// 参数（Source/Size/PosX/PosY 整合为一个动作；H4K 追加 Border 相关字段）
+	// Parameters (Source/Size/PosX/PosY in one action; H4K adds the Border fields)
 	const pipAdjustOptions: AdjustOption[] = [
 		{
 			type: 'dropdown',
@@ -131,7 +196,7 @@ function registerPipActions(
 			await self.sendProtocolField(commandKey, 'Size', Number(o.size), `${tag} Size`)
 			await self.sendProtocolField(commandKey, 'PosX', Number(o.posx), `${tag} PosX`)
 			await self.sendProtocolField(commandKey, 'PosY', Number(o.posy), `${tag} PosY`)
-			// H4K Border 字段（0617 无这些字段，会自动跳过）；旧按钮遗留的 -1 按 0 处理
+			// H4K Border fields (absent on 0617, skipped automatically); legacy -1 values are treated as 0
 			await self.sendProtocolField(
 				commandKey,
 				'BorderEnable',
@@ -156,9 +221,9 @@ function registerPipActions(
 
 // ==================== LUMA ====================
 /**
- * LUMA（0x0031）
- * 字段：0=Tie,1=Status,2=FillSource,3=KeySource,4=Size,5=PosX,6=PosY,7=Clip,8=Gain,
- *       9=Invert,10=MaskEnable,11=MaskLeft,12=MaskTop,13=MaskRight,14=MaskBottom
+ * LUMA (0x0031)
+ * Fields: 0=Tie,1=Status,2=FillSource,3=KeySource,4=Size,5=PosX,6=PosY,7=Clip,8=Gain,
+ *         9=Invert,10=MaskEnable,11=MaskLeft,12=MaskTop,13=MaskRight,14=MaskBottom
  */
 function registerLumaActions(self: ModuleInstance, actions: CompanionActionDefinitions): void {
 	actions['luma_status'] = {
@@ -167,7 +232,7 @@ function registerLumaActions(self: ModuleInstance, actions: CompanionActionDefin
 		options: [{ type: 'dropdown', id: 'status', label: 'Status', choices: STATUS_CHOICES, default: 0 }],
 		callback: async (event) => {
 			const status = Number(event.options.status)
-			// H4K：PIP / LUMA / CHROMA 互斥，先关掉其他两层（旧族直接返回）
+			// H4K: PIP / LUMA / CHROMA are mutually exclusive, so close the other layers first (old families return immediately)
 			if (status >= 1) await self.closeOtherKeys('luma')
 			await self.sendProtocolField('luma', 'Status', status, 'LUMA Status')
 			if (status >= 1) self.markKeyTypeLocal(1)
@@ -176,7 +241,7 @@ function registerLumaActions(self: ModuleInstance, actions: CompanionActionDefin
 	if (supports(self, 'luma', 'FillSource')) {
 		actions['luma_fill_source'] = {
 			name: 'LUMA Fill Source',
-			description: 'LUMA Fill Source (0-7)',
+			description: 'Select the LUMA fill source',
 			options: [
 				{
 					type: 'dropdown',
@@ -193,7 +258,7 @@ function registerLumaActions(self: ModuleInstance, actions: CompanionActionDefin
 	}
 	actions['luma_key_source'] = {
 		name: 'LUMA Key Source',
-		description: 'LUMA Key Source (0-7)',
+		description: 'Select the LUMA key source',
 		options: [
 			{
 				type: 'dropdown',
@@ -207,8 +272,8 @@ function registerLumaActions(self: ModuleInstance, actions: CompanionActionDefin
 			await self.sendProtocolField('luma', 'KeySource', Number(event.options.value), 'LUMA Key Source')
 		},
 	}
-	// 参数选项按协议字段动态拼装（例：H4K 无 Gain；H4K 有 Tolerance/Clip 范围）
-	// H4K 的 Clip / Tolerance 是枚举（不是 0-100 数值），且有 Mask 0~100%
+	// Build option fields from the protocol fields (e.g. H4K has no Gain, but has Tolerance/Clip ranges)
+	// H4K Clip / Tolerance are enums (not 0-100 values), and Mask uses 0~100%
 	const isH4K = !!self.getProtocolCommands()['keyType']
 	const lumaAdjustOptions: AdjustOption[] = []
 	if (supports(self, 'luma', 'Size')) lumaAdjustOptions.push(slider('size', 'Zoom Size', 12, 100, 100))
@@ -232,7 +297,7 @@ function registerLumaActions(self: ModuleInstance, actions: CompanionActionDefin
 		}
 	}
 	if (supports(self, 'luma', 'Gain')) lumaAdjustOptions.push(slider('gain', 'Gain', 0, 100, 50))
-	// H4K 字段
+	// H4K fields
 	if (supports(self, 'luma', 'Tolerance')) {
 		lumaAdjustOptions.push({
 			type: 'dropdown',
@@ -252,7 +317,7 @@ function registerLumaActions(self: ModuleInstance, actions: CompanionActionDefin
 		lumaAdjustOptions.push(slider('toleranceMax', 'Tolerance Max', 0, 100, 100))
 	if (supports(self, 'luma', 'ClipMin')) lumaAdjustOptions.push(slider('clipMin', 'Clip Min', 0, 100, 0))
 	if (supports(self, 'luma', 'ClipMax')) lumaAdjustOptions.push(slider('clipMax', 'Clip Max', 0, 100, 100))
-	// H4K 的 Mask 每个边都是 0~100%
+	// H4K Mask uses 0~100% on every edge
 	if (isH4K && supports(self, 'luma', 'MaskEnable')) lumaAdjustOptions.push(onoff('maskEnable', 'Mask Enable', 0))
 	if (isH4K && supports(self, 'luma', 'MaskLeft')) lumaAdjustOptions.push(slider('maskLeft', 'Mask Left', 0, 100, 0))
 	if (isH4K && supports(self, 'luma', 'MaskTop')) lumaAdjustOptions.push(slider('maskTop', 'Mask Top', 0, 100, 0))
@@ -269,7 +334,7 @@ function registerLumaActions(self: ModuleInstance, actions: CompanionActionDefin
 			await self.sendProtocolField('luma', 'Size', Number(o.size), 'LUMA Zoom Size')
 			await self.sendProtocolField('luma', 'PosX', Number(o.posx), 'LUMA Key PositionX')
 			await self.sendProtocolField('luma', 'PosY', Number(o.posy), 'LUMA Key PositionY')
-			// H4K 字段（0617 无这些字段，会自动跳过）；旧按钮遗留的 -1 按 0 处理
+			// H4K fields (absent on 0617, skipped automatically); legacy -1 values are treated as 0
 			const extras: Array<[string, string]> = [
 				['tolerance', 'Tolerance'],
 				['toleranceMin', 'ToleranceMin'],
@@ -304,7 +369,7 @@ function registerLumaActions(self: ModuleInstance, actions: CompanionActionDefin
 	}
 	actions['luma_mask'] = {
 		name: 'LUMA Mask',
-		description: 'LUMA Mask enable + Left/Top/Right/Bottom (0~100%，左侧不能大于右侧)',
+		description: 'LUMA Mask enable + Left/Top/Right/Bottom (0~100%, left must not exceed right)',
 		options: [
 			onoff('enable', 'Enable'),
 			slider('left', 'Mask Left', 0, isH4K ? 100 : 50, 0),
@@ -319,7 +384,7 @@ function registerLumaActions(self: ModuleInstance, actions: CompanionActionDefin
 			const right = Number(o.right)
 			const bottom = Number(o.bottom)
 			await self.sendProtocolField('luma', 'MaskEnable', Number(o.enable), 'LUMA Mask Enable')
-			// 文档约束：左侧不能大于右侧，顶部不能大于底部
+			// Documented constraint: left must not exceed right, top must not exceed bottom
 			await self.sendProtocolField('luma', 'MaskLeft', Math.min(left, right), 'LUMA Mask Left')
 			await self.sendProtocolField('luma', 'MaskTop', Math.min(top, bottom), 'LUMA Mask Top')
 			await self.sendProtocolField('luma', 'MaskRight', Math.max(right, left), 'LUMA Mask Right')
@@ -330,13 +395,13 @@ function registerLumaActions(self: ModuleInstance, actions: CompanionActionDefin
 
 // ==================== CHROMA ====================
 /**
- * CHROMA（0x0032）
- * 字段：0=Status,1=KeySource,2=KeyType,6=Size,7=PosX,8=PosY,9=Similarity,10=Smooth,
- *       11=Spill,12=Opacity,13=Brightness,14=Contrast,15=Saturation,
- *       16=MaskEnable,17=MaskLeft,18=MaskTop,19=MaskRight,20=MaskBottom
+ * CHROMA (0x0032)
+ * Fields: 0=Status,1=KeySource,2=KeyType,6=Size,7=PosX,8=PosY,9=Similarity,10=Smooth,
+ *         11=Spill,12=Opacity,13=Brightness,14=Contrast,15=Saturation,
+ *         16=MaskEnable,17=MaskLeft,18=MaskTop,19=MaskRight,20=MaskBottom
  */
 function registerChromaActions(self: ModuleInstance, actions: CompanionActionDefinitions): void {
-	// H4K：Key Color Type 只有 Red/Green/Blue、Size 0~100、有 Tolerance/Softness/Clip/Correction/Mask
+	// H4K: Key Color Type is only Red/Green/Blue, Size 0~100, with Tolerance/Softness/Clip/Correction/Mask
 	const isH4K = !!self.getProtocolCommands()['keyType']
 	actions['chroma_status'] = {
 		name: 'CHROMA Status',
@@ -344,7 +409,7 @@ function registerChromaActions(self: ModuleInstance, actions: CompanionActionDef
 		options: [{ type: 'dropdown', id: 'status', label: 'Status', choices: STATUS_CHOICES, default: 0 }],
 		callback: async (event) => {
 			const status = Number(event.options.status)
-			// H4K：PIP / LUMA / CHROMA 互斥，先关掉其他两层（旧族直接返回）
+			// H4K: PIP / LUMA / CHROMA are mutually exclusive, so close the other layers first (old families return immediately)
 			if (status >= 1) await self.closeOtherKeys('chroma')
 			await self.sendProtocolField('chroma', 'Status', status, 'CHROMA Status')
 			if (status >= 1) self.markKeyTypeLocal(2)
@@ -352,7 +417,7 @@ function registerChromaActions(self: ModuleInstance, actions: CompanionActionDef
 	}
 	actions['chroma_key_source'] = {
 		name: 'CHROMA Key Source',
-		description: 'CHROMA Key Source (0-7)',
+		description: 'Select the CHROMA key source',
 		options: [
 			{
 				type: 'dropdown',
@@ -382,7 +447,7 @@ function registerChromaActions(self: ModuleInstance, actions: CompanionActionDef
 			await self.sendProtocolField('chroma', 'KeyType', Number(event.options.value), 'CHROMA Key Color Type')
 		},
 	}
-	// 参数选项按协议字段动态拼装（例：H4K 无 Spill/Opacity，但有 Angle/Tolerance/Softness/Clip/Correction/Color 调整）
+	// Build option fields from the protocol fields (e.g. H4K has no Spill/Opacity, but adds Angle/Tolerance/Softness/Clip/Correction/Color)
 	const chromaAdjustOptions: AdjustOption[] = []
 	if (supports(self, 'chroma', 'Size'))
 		chromaAdjustOptions.push(
@@ -390,7 +455,7 @@ function registerChromaActions(self: ModuleInstance, actions: CompanionActionDef
 		)
 	if (supports(self, 'chroma', 'PosX')) chromaAdjustOptions.push(slider('posx', 'Key PositionX', 0, 100, 50))
 	if (supports(self, 'chroma', 'PosY')) chromaAdjustOptions.push(slider('posy', 'Key PositionY', 0, 100, 50))
-	// 0617（Similarity/Smooth/Spill/Opacity 为它自己的字段）
+	// 0617 fields (Similarity/Smooth/Spill/Opacity are its own fields)
 	if (supports(self, 'chroma', 'Similarity')) chromaAdjustOptions.push(slider('similarity', 'Similarity', 0, 100, 50))
 	if (supports(self, 'chroma', 'Smooth')) chromaAdjustOptions.push(slider('smooth', 'Smoothness', 0, 255, 0))
 	if (supports(self, 'chroma', 'Spill')) chromaAdjustOptions.push(slider('spill', 'Spill', 0, 255, 0))
@@ -398,7 +463,7 @@ function registerChromaActions(self: ModuleInstance, actions: CompanionActionDef
 	if (supports(self, 'chroma', 'Brightness')) chromaAdjustOptions.push(slider('brightness', 'Brightness', 0, 100, 50))
 	if (supports(self, 'chroma', 'Contrast')) chromaAdjustOptions.push(slider('contrast', 'Contrast', 0, 100, 50))
 	if (supports(self, 'chroma', 'Saturation')) chromaAdjustOptions.push(slider('saturation', 'Saturation', 0, 100, 50))
-	// H4K 字段（Angle / Tolerance / Softness / Clip 范围 / Correction / RGB）
+	// H4K fields (Angle / Tolerance / Softness / Clip range / Correction / RGB)
 	if (supports(self, 'chroma', 'Angle')) chromaAdjustOptions.push(slider('angle', 'Angle', 0, 100, 50))
 	if (supports(self, 'chroma', 'Tolerance')) chromaAdjustOptions.push(slider('tolerance', 'Tolerance', 0, 100, 50))
 	if (supports(self, 'chroma', 'Softness')) chromaAdjustOptions.push(slider('softness', 'Softness', 0, 100, 0))
@@ -447,14 +512,14 @@ function registerChromaActions(self: ModuleInstance, actions: CompanionActionDef
 	actions['chroma_adjust'] = {
 		name: 'CHROMA Adjust',
 		description:
-			'CHROMA Size/Pos/Angle/Tolerance/Softness/Clip/Correction/RGB/Mask（0617：Similarity/Smooth/Spill/Opacity）',
+			'CHROMA Size/Pos/Angle/Tolerance/Softness/Clip/Correction/RGB/Mask (0617: Similarity/Smooth/Spill/Opacity)',
 		options: chromaAdjustOptions,
 		callback: async (event) => {
 			const o = event.options
 			await self.sendProtocolField('chroma', 'Size', Number(o.size), 'CHROMA Zoom Size')
 			await self.sendProtocolField('chroma', 'PosX', Number(o.posx), 'CHROMA Key PositionX')
 			await self.sendProtocolField('chroma', 'PosY', Number(o.posy), 'CHROMA Key PositionY')
-			// 0617 字段（H4K 无这些字段，会自动跳过）
+			// 0617 fields (absent on H4K, skipped automatically)
 			const legacy: Array<[string, string]> = [
 				['similarity', 'Similarity'],
 				['smooth', 'Smooth'],
@@ -468,7 +533,7 @@ function registerChromaActions(self: ModuleInstance, actions: CompanionActionDef
 				if (o[opt] === undefined) continue
 				await self.sendProtocolField('chroma', field, Number(o[opt]), `CHROMA ${field}`)
 			}
-			// H4K 字段（0617 无这些字段，会自动跳过）
+			// H4K fields (absent on 0617, skipped automatically)
 			const extras: Array<[string, string]> = [
 				['angle', 'Angle'],
 				['tolerance', 'Tolerance'],
@@ -485,8 +550,8 @@ function registerChromaActions(self: ModuleInstance, actions: CompanionActionDef
 				['maskRight', 'MaskRight'],
 				['maskBottom', 'MaskBottom'],
 			]
-			// Clip_Min ≤ Clip_Max（先算好再统一下发）
-			// H4K 字段（0617 无这些字段，会自动跳过）；旧按钮遗留的 -1 按 0 处理
+			// Clip_Min <= Clip_Max (computed first, then sent together)
+			// H4K fields (absent on 0617, skipped automatically); legacy -1 values are treated as 0
 			const cMin = Math.max(0, Math.min(Number(o.clipMin ?? 0), Number(o.clipMax ?? 100)))
 			const cMax = Math.max(0, Math.max(Number(o.clipMin ?? 0), Number(o.clipMax ?? 100)))
 			for (const [opt, field] of extras) {
@@ -500,7 +565,7 @@ function registerChromaActions(self: ModuleInstance, actions: CompanionActionDef
 	}
 	actions['chroma_mask'] = {
 		name: 'CHROMA Mask',
-		description: 'CHROMA Mask enable + Left/Top/Right/Bottom (0~100%，左侧不能大于右侧)',
+		description: 'CHROMA Mask enable + Left/Top/Right/Bottom (0~100%, left must not exceed right)',
 		options: [
 			onoff('enable', 'Enable'),
 			slider('left', 'Mask Left', 0, isH4K ? 100 : 50, 0),
@@ -525,9 +590,9 @@ function registerChromaActions(self: ModuleInstance, actions: CompanionActionDef
 
 // ==================== DSK ====================
 /**
- * DSK（0x0040）
- * 字段：0=Tie,1=Status,2=FillSource,3=KeySource,4=Clip,5=Gain,6=Invert,
- *       7=MaskEnable,8=MaskLeft,9=MaskTop,10=MaskRight,11=MaskBottom
+ * DSK (0x0040)
+ * Fields: 0=Tie,1=Status,2=FillSource,3=KeySource,4=Clip,5=Gain,6=Invert,
+ *         7=MaskEnable,8=MaskLeft,9=MaskTop,10=MaskRight,11=MaskBottom
  */
 function registerDskActions(self: ModuleInstance, actions: CompanionActionDefinitions): void {
 	actions['dsk_status'] = {
@@ -541,7 +606,7 @@ function registerDskActions(self: ModuleInstance, actions: CompanionActionDefini
 	if (supports(self, 'dsk', 'FillSource')) {
 		actions['dsk_fill_source'] = {
 			name: 'DSK Fill Source',
-			description: 'DSK Fill Source (0-7)',
+			description: 'Select the DSK fill source',
 			options: [
 				{
 					type: 'dropdown',
@@ -558,7 +623,7 @@ function registerDskActions(self: ModuleInstance, actions: CompanionActionDefini
 	}
 	actions['dsk_key_source'] = {
 		name: 'DSK Key Source',
-		description: 'DSK Key Source (0-7)',
+		description: 'Select the DSK key source',
 		options: [
 			{
 				type: 'dropdown',
@@ -628,8 +693,8 @@ function registerDskActions(self: ModuleInstance, actions: CompanionActionDefini
 
 // ==================== LOGO ====================
 /**
- * LOGO（0x0041）
- * 字段：0=Status,1=Select,2=PosX,3=PosY,4=Size,5=Opacity
+ * LOGO (0x0041)
+ * Fields: 0=Status,1=Select,2=PosX,3=PosY,4=Size,5=Opacity
  */
 function registerLogoActions(self: ModuleInstance, actions: CompanionActionDefinitions): void {
 	actions['logo_status'] = {
@@ -642,7 +707,7 @@ function registerLogoActions(self: ModuleInstance, actions: CompanionActionDefin
 	}
 	actions['logo_select'] = {
 		name: 'LOGO Select',
-		description: 'LOGO Select (0-7)',
+		description: 'Select the logo to display',
 		options: [
 			{
 				type: 'dropdown',
@@ -650,7 +715,7 @@ function registerLogoActions(self: ModuleInstance, actions: CompanionActionDefin
 				label: 'Logo',
 				choices: Array.from({ length: self.getProtocolFamilyInfo().logoCount }, (_, n) => ({
 					id: n,
-					label: `Logo ${n}`,
+					label: `Logo ${n + 1}`,
 				})),
 				default: 0,
 			},
@@ -681,11 +746,11 @@ function registerLogoActions(self: ModuleInstance, actions: CompanionActionDefin
 // ==================== TRANSITIONS ====================
 /**
  * TRANSITIONS
- * 0x0020：0~3=Wipe1~4 样式, 5=Direction(0:Normal/1:Invert/2:Flip-Flop)
- * 0x0010 按键：Wipe1~4=27~30, MIX=31, DIP=32
+ * 0x0020: 0~3 = Wipe1~4 style, 4 = Direction (0:Normal/1:Invert/2:Flip-Flop)
+ * 0x0010 keys: Wipe1~4=27~30, MIX=31, DIP=32 (0617 values; H4K uses its own key map)
  */
 function registerTransitionActions(self: ModuleInstance, actions: CompanionActionDefinitions): void {
-	// WIPE 数量与键值按协议族决定（0617：4 个；H4K：3 个）
+	// Wipe count and key values follow the protocol family (0617: 4; H4K: 3)
 	const family = self.getProtocolFamilyInfo()
 	const keys = family.keyMap
 	for (let n = 1; n <= family.wipeCount; n++) {
@@ -693,7 +758,7 @@ function registerTransitionActions(self: ModuleInstance, actions: CompanionActio
 		const label = `WIPE${n}`
 		actions[`trans_wipe${n}`] = {
 			name: `Transition ${label}`,
-			description: `Set ${label} style (0x0020, No.${n}) and press ${label} (0x0010, Key_val=${keyVal})`,
+			description: `Set ${label} style and take it to air`,
 			options: [
 				{
 					type: 'dropdown',
@@ -704,28 +769,30 @@ function registerTransitionActions(self: ModuleInstance, actions: CompanionActio
 				},
 			],
 			callback: async (event) => {
-				// 样式值按协议族偏移换算（H4K / 0617 的 offset 均为 0，下拉 id 就是下发的样式值）
+				// Convert the style by the family offset (both H4K and 0617 use 0, so the dropdown id is the sent value)
 				const styleValue = Number(event.options.style) - (family.wipeStyleOffset ?? 0)
-				// 仅 H4K：登记写后校验，回读 0x0120 时日志会打印实际落到哪个 WipeN
+				// H4K only: arm the write check so the 0x0120 read-back logs which WipeN actually received it
 				if (family.queryAllOnConnect) self.armWipeCheck(n, styleValue)
 				await self.sendProtocolField('transition', `Wipe${n}`, styleValue, `${label} Style`)
-				await self.sendToDevice('KEY_PRESS', { keyVal })
-				// 仅 H4K：回读 0x0120（日志会打印设备侧 Wipe1/2/3），用于核对样式是否落到正确通道
+				if (keyVal !== undefined) {
+					await self.sendToDevice('KEY_PRESS', { keyVal })
+				} else {
+					self.log('warn', `[Transition] ${label} has no key value; style was set but not taken to air`)
+				}
+				// H4K only: read back 0x0120 (the log prints Wipe1/2/3 on the device) to verify the style reached the right channel
 				if (family.queryAllOnConnect) {
-					setTimeout(() => {
-						void self.queryTransitionOnce()
-					}, 250)
+					self.schedule(() => void self.queryTransitionOnce(), 250)
 				}
 			},
 		}
 	}
 
-	// 合并动作：一次选择 WIPE 通道 + 样式（仅 H4K 等开启 mergeWipeStyleAction 的族；
-	// 0617/0605 保持原有的 trans_wipe1~4 动作列表完全不变）
+	// Combined action: pick a wipe channel + style in one go (only for families with mergeWipeStyleAction, e.g. H4K;
+	// 0617/0605 keep their trans_wipe1~4 action list completely unchanged)
 	if (family.mergeWipeStyleAction) {
 		actions['trans_wipe_style'] = {
 			name: 'Transition WIPE Style (Wipe1/2/3)',
-			description: '设置指定 WIPE 通道的样式（0x0020），可选是否同时按下该 WIPE 键切换通道',
+			description: 'Set the style of a WIPE channel, optionally pressing that WIPE key to switch to it',
 			options: [
 				{
 					type: 'dropdown',
@@ -744,7 +811,7 @@ function registerTransitionActions(self: ModuleInstance, actions: CompanionActio
 				{
 					type: 'checkbox',
 					id: 'press',
-					label: '同时按下 WIPE 键（切换到该通道）',
+					label: 'Also press the WIPE key (switch to this channel)',
 					default: true,
 				},
 			],
@@ -758,42 +825,41 @@ function registerTransitionActions(self: ModuleInstance, actions: CompanionActio
 					const keyVal = keys.wipe[n - 1]
 					if (keyVal !== undefined) await self.sendToDevice('KEY_PRESS', { keyVal })
 				}
-				// 仅 H4K：回读 0x0120 核对样式是否落到正确通道
+				// H4K only: read back 0x0120 to verify the style reached the right channel
 				if (family.queryAllOnConnect) {
-					setTimeout(() => {
-						void self.queryTransitionOnce()
-					}, 250)
+					self.schedule(() => void self.queryTransitionOnce(), 250)
 				}
 			},
 		}
 	}
 
-	// MIX / DIP / FREEZE：0x0010 按键（整合为一个下拉）
+	// MIX / DIP / FREEZE: 0x0010 keys (combined into one dropdown)
 	actions['trans_effect'] = {
-		name: 'Transition MIX / DIP',
-		description: `Press MIX (${keys.mix}) / DIP (${keys.dip}) / FREEZE (${keys.freeze})`,
+		name: 'Transition MIX / DIP / FREEZE',
+		description: 'Press MIX / DIP / FREEZE',
 		options: [
 			{
 				type: 'dropdown',
 				id: 'value',
 				label: 'Effect',
 				choices: [
-					{ id: keys.mix, label: 'MIX' },
-					{ id: keys.dip, label: 'DIP' },
-					{ id: keys.freeze, label: 'FREEZE' },
+					{ id: 'mix', label: 'MIX' },
+					{ id: 'dip', label: 'DIP' },
+					{ id: 'freeze', label: 'FREEZE' },
 				],
-				default: keys.mix,
+				default: 'mix',
 			},
 		],
 		callback: async (event) => {
-			await self.sendToDevice('KEY_PRESS', { keyVal: Number(event.options.value) })
+			const keyVal = resolveKeyId(self, event.options.value)
+			if (keyVal !== undefined) await self.sendToDevice('KEY_PRESS', { keyVal })
 		},
 	}
 
-	// Direction：Normal / Invert / Flip-Flop（整合为一个下拉）
+	// Direction: Normal / Invert / Flip-Flop (combined into one dropdown)
 	actions['trans_direction'] = {
 		name: 'Transition Direction',
-		description: 'Set Direction (0x0020): Normal / Invert / Flip-Flop',
+		description: 'Set transition direction: Normal / Invert / Flip-Flop',
 		options: [{ type: 'dropdown', id: 'value', label: 'Direction', choices: DIRECTION_CHOICES, default: 0 }],
 		callback: async (event) => {
 			await self.sendProtocolField('transition', 'Direction', Number(event.options.value), 'Transition Direction')
@@ -803,12 +869,12 @@ function registerTransitionActions(self: ModuleInstance, actions: CompanionActio
 
 // ==================== AUDIO ====================
 /**
- * Audio（0x0050）字段：
+ * Audio (0x0050) fields:
  *   0=Mute,1=AllAfv,2=Reset,3=MasterEn,4=MasterVol,5=EarEn,6=EarVol,7=EarSoc,
- *   8~31=IN1~IN6（每通道 EN/VOL/AFV/DELAY 共 4 项）,
+ *   8~31=IN1~IN6 (EN/VOL/AFV/DELAY per channel),
  *   32=MicXlrMode(0:MIC/MIX,1:XLR), 33~37=MIC1(EN/Guitar/PreGain/VOL/Delay), 38~42=MIC2,
  *   43~45=XLR(EN/VOL/Delay), 46~48=LineIn(EN/VOL/Delay)
- * 注：XLR 与 MIC1~2 互斥，由 MicXlrMode(32) 控制。
+ * Note: XLR and MIC1~2 are mutually exclusive, controlled by MicXlrMode(32).
  */
 const AUDIO_IN_CHOICES = [
 	{ id: 1, label: 'IN1' },
@@ -827,11 +893,11 @@ const AUDIO_MIC_XLR_MODE_CHOICES = [
 	{ id: 1, label: 'XLR' },
 ]
 
-/** 注册 AUDIO 分组动作（设置指令 0x0050）—— 每个动作只负责一个功能 */
+/** Register the AUDIO group actions (set command 0x0050) - each action controls one function only */
 function registerAudioActions(self: ModuleInstance, actions: CompanionActionDefinitions): void {
 	const family = self.getProtocolFamilyInfo()
 
-	// 1) 无通道的开关（按协议字段存在性注册，XLR/LineIn 仅 0617 支持）
+	// 1) Channel-less switches (registered when the protocol has the field; XLR/LineIn are 0617 only)
 	const simpleToggles: Array<[string, string, string]> = [
 		['audio_all_afv', 'Audio All AFV', 'AllAfv'],
 		['audio_master_en', 'Audio PGM OUT Enable', 'MasterEnable'],
@@ -841,11 +907,11 @@ function registerAudioActions(self: ModuleInstance, actions: CompanionActionDefi
 	]
 	for (const [id, label, field] of simpleToggles) {
 		if (!supports(self, 'audio', field)) continue
-		// H4K 无 ALL AFV 功能（协议字段仍在布局中，只是不注册 UI）
+		// H4K has no All AFV (the protocol field stays in the layout, only the UI is not registered)
 		if (id === 'audio_all_afv' && family.hideAllAfvAction) continue
 		actions[id] = {
 			name: label,
-			description: `${label} (0x0050 ${field})`,
+			description: label,
 			options: [onoff('value', 'State')],
 			callback: async (event) => {
 				await self.sendProtocolField('audio', field, Number(event.options.value), label)
@@ -853,7 +919,7 @@ function registerAudioActions(self: ModuleInstance, actions: CompanionActionDefi
 		}
 	}
 
-	// 2) 无通道的滑块（Volume / Delay）
+	// 2) Channel-less sliders (Volume / Delay)
 	const simpleSliders: Array<[string, string, string, number, number, number]> = [
 		['audio_master_vol', 'Audio PGM OUT Volume', 'MasterVolume', 0, 72, 50],
 		['audio_ear_vol', 'Audio Earphone Volume', 'EarVolume', 0, 72, 50],
@@ -866,7 +932,7 @@ function registerAudioActions(self: ModuleInstance, actions: CompanionActionDefi
 		if (!supports(self, 'audio', field)) continue
 		actions[id] = {
 			name: label,
-			description: `${label} (0x0050 ${field})`,
+			description: label,
 			options: [slider('value', 'Value', min, max, def)],
 			callback: async (event) => {
 				await self.sendProtocolField('audio', field, Number(event.options.value), label)
@@ -874,9 +940,9 @@ function registerAudioActions(self: ModuleInstance, actions: CompanionActionDefi
 		}
 	}
 
-	// 3) Earphone 源（下拉）：IN 路数按协议族裁剪，MIC / Line In 仅在协议支持时提供
-	//    - 0617：PGM + IN1~6 + MIC1/2 + Line In（10 项，与原行为一致）
-	//    - H4K ：PGM + IN1~4 + MIC1/2（无 IN5/IN6、无 Line In）
+	// 3) Earphone source (dropdown): input count follows the family; MIC / Line In only when supported
+	//    - 0617: PGM + IN1~6 + MIC1/2 + Line In (10 entries, same as before)
+	//    - H4K : PGM + IN1~4 + MIC1/2 (no IN5/IN6, no Line In)
 	if (supports(self, 'audio', 'EarSource')) {
 		const earSources: Array<{ id: number; label: string }> = [{ id: 0, label: 'PGM' }]
 		for (let n = 1; n <= family.inputCount; n++) earSources.push({ id: n, label: `IN${n}` })
@@ -885,7 +951,7 @@ function registerAudioActions(self: ModuleInstance, actions: CompanionActionDefi
 		if (supports(self, 'audio', 'LineInEnable')) earSources.push({ id: 9, label: 'Line In' })
 		actions['audio_ear_src'] = {
 			name: 'Audio Earphone Source',
-			description: 'Earphone Source (0x0050 EarSource)',
+			description: 'Select the earphone source',
 			options: [{ type: 'dropdown', id: 'value', label: 'Source', choices: earSources, default: 0 }],
 			callback: async (event) => {
 				await self.sendProtocolField('audio', 'EarSource', Number(event.options.value), 'Earphone Source')
@@ -893,7 +959,7 @@ function registerAudioActions(self: ModuleInstance, actions: CompanionActionDefi
 		}
 	}
 
-	// 4) IN 通道：每个功能一个动作（含通道下拉），通道数按协议族（0617=6 / H4K=4）
+	// 4) IN channels: one action per function (with a channel dropdown); channel count follows the family (0617=6 / H4K=4)
 	const inFns: Array<[string, string, boolean, number, number, number, string]> = [
 		['audio_in_en', 'Audio IN Enable', true, 0, 0, 0, 'Enable'],
 		['audio_in_vol', 'Audio IN Volume', false, 0, 72, 50, 'Volume'],
@@ -904,7 +970,7 @@ function registerAudioActions(self: ModuleInstance, actions: CompanionActionDefi
 		if (!supports(self, 'audio', `In1${suffix}`)) continue
 		actions[id] = {
 			name: label,
-			description: `${label} (0x0050, IN1~${family.inputCount})`,
+			description: `${label} (IN1~IN${family.inputCount})`,
 			options: [
 				{
 					type: 'dropdown',
@@ -922,11 +988,11 @@ function registerAudioActions(self: ModuleInstance, actions: CompanionActionDefi
 		}
 	}
 
-	// 5) MIC1~2：每个功能一个动作（Guitar/PreGain/Delay 仅 0617 支持）
+	// 5) MIC1~2: one action per function (Guitar/PreGain/Delay are 0617 only)
 	const micFns: Array<[string, string, boolean, number, number, number, string]> = [
 		['audio_mic_en', 'Audio MIC Enable', true, 0, 0, 0, 'Enable'],
 		['audio_mic_guitar', 'Audio MIC Guitar', true, 0, 0, 0, 'Guitar'],
-		['audio_mic_pregate', 'Audio MIC Pre-Gain', false, 0, 14, 0, 'PreGain'],
+		['audio_mic_pregain', 'Audio MIC Pre-Gain', false, 0, 14, 0, 'PreGain'],
 		['audio_mic_vol', 'Audio MIC Volume', false, 0, 72, 50, 'Volume'],
 		['audio_mic_delay', 'Audio MIC Delay', false, 0, 100, 0, 'Delay'],
 	]
@@ -934,7 +1000,7 @@ function registerAudioActions(self: ModuleInstance, actions: CompanionActionDefi
 		if (!supports(self, 'audio', `Mic1${suffix}`)) continue
 		actions[id] = {
 			name: label,
-			description: `${label} (0x0050, MIC1~2)`,
+			description: `${label} (MIC1~2)`,
 			options: [
 				{ type: 'dropdown', id: 'channel', label: 'Channel', choices: AUDIO_MIC_CHOICES, default: 1 },
 				isToggle ? onoff('value', 'State') : slider('value', 'Value', min, max, def),
@@ -946,11 +1012,11 @@ function registerAudioActions(self: ModuleInstance, actions: CompanionActionDefi
 		}
 	}
 
-	// 6) Reset（H4K 不提供：hideAudioResetAction，协议字段 Reset 仍保留在布局中）
+	// 6) Reset (not offered on H4K: hideAudioResetAction; the Reset field stays in the layout)
 	if (supports(self, 'audio', 'Reset') && !family.hideAudioResetAction) {
 		actions['audio_reset'] = {
 			name: 'Audio Reset',
-			description: 'AUDIO_RESET (0x0050 Reset)',
+			description: 'Reset all audio settings to defaults',
 			options: [],
 			callback: async () => {
 				await self.sendProtocolField('audio', 'Reset', 1, 'Audio Reset')
@@ -958,11 +1024,11 @@ function registerAudioActions(self: ModuleInstance, actions: CompanionActionDefi
 		}
 	}
 
-	// 7) MIC / XLR 模式（XLR 与 MIC 互斥，仅 0617 支持）
+	// 7) MIC / XLR mode (XLR and MIC are mutually exclusive; 0617 only)
 	if (supports(self, 'audio', 'MicXlrMode')) {
 		actions['audio_mic_xlr_mode'] = {
 			name: 'Audio MIC / XLR Mode',
-			description: 'MIC_XLR_MODE (0x0050 MicXlrMode): MIC(0) / XLR(1)',
+			description: 'Select the MIC/XLR mode',
 			options: [{ type: 'dropdown', id: 'value', label: 'Mode', choices: AUDIO_MIC_XLR_MODE_CHOICES, default: 0 }],
 			callback: async (event) => {
 				await self.sendProtocolField('audio', 'MicXlrMode', Number(event.options.value), 'MIC/XLR Mode')
@@ -972,7 +1038,7 @@ function registerAudioActions(self: ModuleInstance, actions: CompanionActionDefi
 }
 
 // ==================== TBAR ====================
-/** T-Bar 移动（0x0010, Param_Vaild=1 T_Bar_val；对外刻度 0~500） */
+/** T-Bar move (0x0010, Param_Vaild=1 T_Bar_val; UI scale 0~500) */
 function registerTbarActions(self: ModuleInstance, actions: CompanionActionDefinitions): void {
 	actions['tbar_move'] = {
 		name: 'T-Bar Move',
@@ -1002,24 +1068,28 @@ function registerTbarActions(self: ModuleInstance, actions: CompanionActionDefin
 	}
 }
 
-// ==================== 主入口 ====================
+// ==================== Entry point ====================
 export function UpdateActions(self: ModuleInstance): void {
 	const actions: CompanionActionDefinitions = {}
 
-	// 源选择（PGM1~N / PVW1~N + Pattern）：键值与路数按协议族决定（0617=6 路 / H4K=4 路）
+	// Source selection (PGM1~N / PVW1~N + Pattern): counts follow the protocol family (0617=6 / H4K=4)
 	const family = self.getProtocolFamilyInfo()
 	const keys = family.keyMap
-	const sourceChoices: Array<{ id: number; label: string }> = []
-	keys.pgm.forEach((keyVal, i) => sourceChoices.push({ id: keyVal, label: `PGM${i + 1}` }))
-	keys.pgmPattern.forEach((keyVal, i) => sourceChoices.push({ id: keyVal, label: `PGM PATTERN${i + 1}` }))
-	keys.pvw.forEach((keyVal, i) => sourceChoices.push({ id: keyVal, label: `PVW${i + 1}` }))
-	keys.pvwPattern.forEach((keyVal, i) => sourceChoices.push({ id: keyVal, label: `PVW PATTERN${i + 1}` }))
+	const sourceChoices: Array<{ id: string; label: string }> = []
+	keys.pgm.forEach((_, i) => sourceChoices.push({ id: `pgm${i + 1}`, label: `PGM${i + 1}` }))
+	keys.pgmPattern.forEach((_, i) => sourceChoices.push({ id: `pgm_pattern${i + 1}`, label: `PGM PATTERN${i + 1}` }))
+	keys.pvw.forEach((_, i) => sourceChoices.push({ id: `pvw${i + 1}`, label: `PVW${i + 1}` }))
+	keys.pvwPattern.forEach((_, i) => sourceChoices.push({ id: `pvw_pattern${i + 1}`, label: `PVW PATTERN${i + 1}` }))
 	actions['set_source'] = {
 		name: 'Source (PGM / PVW)',
 		description: 'Select PGM/PVW source (with pattern)',
-		options: [{ type: 'dropdown', id: 'source', label: 'Source', choices: sourceChoices, default: 1 }],
+		options: [{ type: 'dropdown', id: 'source', label: 'Source', choices: sourceChoices, default: 'pgm1' }],
 		callback: async (event) => {
-			const keyVal = Number(event.options.source)
+			const keyVal = resolveKeyId(self, event.options.source)
+			if (keyVal === undefined) {
+				self.log('warn', `Unknown source key: ${event.options.source}`)
+				return
+			}
 			const success = await self.sendToDevice('KEY_PRESS', { keyVal })
 			if (!success) {
 				self.log('warn', `Failed to send source key ${keyVal}`)
@@ -1027,9 +1097,9 @@ export function UpdateActions(self: ModuleInstance): void {
 		},
 	}
 
-	// Key Type 只读（0x0130）：不需要 0x0030 写入，切 Key 层直接用 PIP/LUMA/CHROMA/DSK 的 Key / ON AIR 按键
+	// Key Type is read-only (0x0130): no 0x0030 write is needed, switching layers just presses the PIP/LUMA/CHROMA/DSK KEY / ON AIR keys
 
-	// Switch：Stream 1~N（依赖 Codec 指令，H4K 无此能力）
+	// Switch: Stream 1~N (requires the Codec command; H4K has no streaming)
 	if (family.hasStream && keys.stream.length > 0) {
 		actions['switch_stream'] = {
 			name: 'Switch Stream',
@@ -1039,17 +1109,18 @@ export function UpdateActions(self: ModuleInstance): void {
 					type: 'dropdown',
 					id: 'value',
 					label: 'Stream',
-					choices: keys.stream.map((keyVal, i) => ({ id: keyVal, label: `Stream ${i + 1}` })),
-					default: keys.stream[0],
+					choices: keys.stream.map((_, i) => ({ id: `stream${i + 1}`, label: `Stream ${i + 1}` })),
+					default: 'stream1',
 				},
 			],
 			callback: async (event) => {
-				await self.sendToDevice('KEY_PRESS', { keyVal: Number(event.options.value) })
+				const keyVal = resolveKeyId(self, event.options.value)
+				if (keyVal !== undefined) await self.sendToDevice('KEY_PRESS', { keyVal })
 			},
 		}
 	}
 
-	// Switch：CUT / AUTO / FTB / MUTE（整合为一个下拉）
+	// Switch: CUT / AUTO / FTB / MUTE (combined into one dropdown)
 	actions['switch_transition'] = {
 		name: 'Switch CUT / AUTO / FTB / MUTE',
 		description: 'Press CUT / AUTO / FTB / MUTE',
@@ -1059,47 +1130,49 @@ export function UpdateActions(self: ModuleInstance): void {
 				id: 'value',
 				label: 'Key',
 				choices: [
-					{ id: keys.cut, label: 'CUT' },
-					{ id: keys.auto, label: 'AUTO' },
-					{ id: keys.ftb, label: 'FTB' },
-					{ id: keys.mute, label: 'MUTE' },
+					{ id: 'cut', label: 'CUT' },
+					{ id: 'auto', label: 'AUTO' },
+					{ id: 'ftb', label: 'FTB' },
+					{ id: 'mute', label: 'MUTE' },
 				],
-				default: keys.cut,
+				default: 'cut',
 			},
 		],
 		callback: async (event) => {
-			await self.sendToDevice('KEY_PRESS', { keyVal: Number(event.options.value) })
+			const keyVal = resolveKeyId(self, event.options.value)
+			if (keyVal !== undefined) await self.sendToDevice('KEY_PRESS', { keyVal })
 		},
 	}
 
-	// H4K：直接发 Key / ON AIR 按键（0x0010 keytype）—— 与设备面板按键等效，
-	// 设备会自己把自己的 0x0130（当前激活 Key 层）上报上来，不需要 0x0030 写入
+	// H4K: send the KEY / ON AIR key directly (0x0010 keytype) - equivalent to the device panel key.
+	// The device reports its own 0x0130 (active key layer), so no 0x0030 write is needed.
 	if (family.keyPressFormat === 'keytype') {
 		actions['key_module_press'] = {
 			name: 'Key Module Press (KEY / ON AIR)',
-			description: '直接按 PIP/LUMA/CHROMA/DSK 的 KEY 或 ON AIR 键',
+			description: 'Press the KEY or ON AIR key of PIP/LUMA/CHROMA/DSK directly',
 			options: [
 				{
 					type: 'dropdown',
 					id: 'value',
 					label: 'Key',
 					choices: [
-						{ id: keys.pip, label: 'PIP KEY' },
-						{ id: keys.pipOnAir, label: 'PIP ON AIR' },
-						{ id: keys.luma, label: 'LUMA KEY' },
-						{ id: keys.lumaOnAir, label: 'LUMA ON AIR' },
-						{ id: keys.chroma, label: 'CHROMA KEY' },
-						{ id: keys.chromaOnAir, label: 'CHROMA ON AIR' },
-						{ id: keys.dsk, label: 'DSK KEY' },
-						{ id: keys.dskOnAir, label: 'DSK ON AIR' },
+						{ id: 'pip', label: 'PIP KEY' },
+						{ id: 'pip_on_air', label: 'PIP ON AIR' },
+						{ id: 'luma', label: 'LUMA KEY' },
+						{ id: 'luma_on_air', label: 'LUMA ON AIR' },
+						{ id: 'chroma', label: 'CHROMA KEY' },
+						{ id: 'chroma_on_air', label: 'CHROMA ON AIR' },
+						{ id: 'dsk', label: 'DSK KEY' },
+						{ id: 'dsk_on_air', label: 'DSK ON AIR' },
 					],
-					default: keys.pip,
+					default: 'pip',
 				},
 			],
 			callback: async (event) => {
-				const keyVal = Number(event.options.value)
+				const keyVal = resolveKeyId(self, event.options.value)
+				if (keyVal === undefined) return
 				await self.sendToDevice('KEY_PRESS', { keyVal })
-				// 按的是 PIP/LUMA/CHROMA 的 KEY/ON AIR 键时，稍后回查 0x0130 校准高亮
+				// Pressing a PIP/LUMA/CHROMA KEY/ON AIR key: re-query 0x0130 shortly after to calibrate the highlight
 				const k = self.getProtocolFamilyInfo().keyMap
 				const pipKeys = [k.pip, k.pipOnAir]
 				const lumaKeys = [k.luma, k.lumaOnAir]
@@ -1111,33 +1184,33 @@ export function UpdateActions(self: ModuleInstance): void {
 		}
 	}
 
-	// PIP1~N：路数按协议族（0617=3 / H4K=1）
+	// PIP1~N: layer count follows the protocol family (0617=3 / H4K=1)
 	for (let n = 1; n <= family.pipCount; n++) {
 		registerPipActions(self, actions, n, `pip${n}`)
 	}
 
-	// LUMA（0x0031）
+	// LUMA (0x0031)
 	registerLumaActions(self, actions)
 
-	// CHROMA（0x0032）
+	// CHROMA (0x0032)
 	registerChromaActions(self, actions)
 
-	// DSK（0x0040）
+	// DSK (0x0040)
 	registerDskActions(self, actions)
 
-	// LOGO（0x0041）
+	// LOGO (0x0041)
 	registerLogoActions(self, actions)
 
-	// TRANSITIONS（0x0020 / 0x0010）
+	// TRANSITIONS (0x0020 / 0x0010)
 	registerTransitionActions(self, actions)
 
-	// AUDIO（0x0050）
+	// AUDIO (0x0050)
 	registerAudioActions(self, actions)
 
-	// TBAR（0x0010）
+	// TBAR (0x0010)
 	registerTbarActions(self, actions)
 
-	// 网络扫描（系统）
+	// Network scan (system)
 	actions['scan_devices'] = {
 		name: 'Scan Network for Devices',
 		description: 'Discover devices on the local network via UDP broadcast',
@@ -1148,24 +1221,19 @@ export function UpdateActions(self: ModuleInstance): void {
 		},
 	}
 
-	// 按当前产品档案裁剪：不属于该产品功能集的动作不注册
+	// Filter by the current product profile: actions outside its feature set are not registered
 	const profile = self.getDeviceProfile()
 	for (const id of Object.keys(actions)) {
 		if (!isIdEnabled(profile, id)) delete actions[id]
 	}
 
-	// 统一包裹：执行时记录本次动作的唯一 key（供“仅被点击按钮”的橙色执行反馈）
+	// Uniform wrapper: runs each action with its own flash key (L7: isolated per async context)
 	for (const id of Object.keys(actions)) {
 		const def = actions[id]
 		if (!def) continue
 		const orig = def.callback
 		def.callback = async (event, context) => {
-			self.pendingFlashKey = flashKeyFor(id, event.options)
-			try {
-				return await orig(event, context)
-			} finally {
-				self.pendingFlashKey = undefined
-			}
+			return self.runWithFlashKey(flashKeyFor(id, event.options), async () => orig(event, context))
 		}
 	}
 

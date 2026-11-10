@@ -12,19 +12,19 @@ function normalizeModel(rawModel: string | undefined): string {
 }
 
 /**
- * 匹配产品档案。
- * 优先级：
- *  1) 设备类型标识（广播回包 productType，H4K 系 6/7/8 可唯一区分；比 model 字符串可靠）
- *  2) 型号前缀，最长前缀优先（VS0405EH 优于 VS0405E）
+ * Match a device profile.
+ * Priority:
+ *  1) Device type id (productType from the discovery reply; 6/7/8 uniquely identify the H4K family)
+ *  2) Model prefix, longest prefix first (VS0405EH before VS0405E)
  */
 export function matchDeviceProfile(rawModel: string | undefined, deviceType?: number): DeviceProfile | undefined {
-	// 1) 设备类型标识优先（仅对声明了 productTypes 的产品生效，不影响 0617 / 0605）
+	// 1) Device type id first (only for profiles declaring productTypes; 0617 / 0605 unaffected)
 	if (typeof deviceType === 'number') {
 		const byType = DEVICE_PROFILES.find((p) => p.productTypes?.includes(deviceType))
 		if (byType) return byType
 	}
 
-	// 2) 型号前缀（最长优先）
+	// 2) Model prefix (longest match wins)
 	const code = normalizeModel(rawModel)
 	if (!code) return undefined
 
@@ -42,12 +42,18 @@ export function matchDeviceProfile(rawModel: string | undefined, deviceType?: nu
 	return matched
 }
 
-/** 取当前设备的产品档案；未识别型号回退默认档案 */
+/** Profile for the current device; unknown models fall back to the default profile. */
 export function getActiveProfile(rawModel: string | undefined, deviceType?: number): DeviceProfile {
 	return matchDeviceProfile(rawModel, deviceType) ?? DEFAULT_DEVICE_PROFILE
 }
 
-/** 型号代码 / 设备类型 -> 界面显示名（未识别时保留原始代码） */
+/** Look up a profile by its id (used by the manual Device Model config). */
+export function getProfileById(id: string | undefined): DeviceProfile | undefined {
+	if (!id) return undefined
+	return DEVICE_PROFILES.find((p) => p.id === id)
+}
+
+/** Model code / device type -> display name (keeps the raw code when unknown). */
 export function resolveDeviceModel(rawModel: string | undefined, deviceType?: number): string {
 	const profile = matchDeviceProfile(rawModel, deviceType)
 	if (profile) return profile.displayName
@@ -55,9 +61,10 @@ export function resolveDeviceModel(rawModel: string | undefined, deviceType?: nu
 }
 
 /**
- * 型号代码 / 设备类型 -> 心跳 Dev_Type。
- * 若设备类型能唯一标识该产品，直接用实测值（H4K PLUS 的 0x06/0x07 原样下发）；
- * 否则按型号查表；未识别返回 0xFF，由调用方回退 productType。
+ * Model code / device type -> heartbeat Dev_Type.
+ * When the device type uniquely identifies the product, use the measured value
+ * (H4K PLUS 0x06/0x07 is sent as-is); otherwise look it up by model.
+ * Returns 0xFF when unknown, so the caller can fall back to productType.
  */
 export function getUdpModelIndex(rawModel: string | undefined, deviceType?: number): number {
 	const profile = matchDeviceProfile(rawModel, deviceType)
@@ -66,18 +73,18 @@ export function getUdpModelIndex(rawModel: string | undefined, deviceType?: numb
 	return profile.udpDevType
 }
 
-/** 协议族命令表 + 产品覆盖，得到该产品实际使用的命令表 */
+/** Protocol-family command table plus product overrides. */
 export function buildProtocolCommands(profile: DeviceProfile): Record<string, ProtocolCommand> {
 	const base = getProtocolFamily(profile.protocolFamily).commands
 	return profile.protocolOverrides ? { ...base, ...profile.protocolOverrides } : base
 }
 
-/** 该产品是否启用某功能分组（system 始终启用） */
+/** Whether a feature group is enabled on this product (system is always enabled). */
 export function hasFeature(profile: DeviceProfile, feature: DeviceFeatureKey): boolean {
 	return feature === 'system' || profile.features.includes(feature)
 }
 
-/** action / feedback / preset 的 id -> 功能分组；未命中规则视为 system */
+/** action / feedback / preset id -> feature group; unknown ids count as system. */
 const FEATURE_ID_RULES: Array<[RegExp, DeviceFeatureKey]> = [
 	[/^pip\d/, 'pip'],
 	[/^luma/, 'luma'],
@@ -113,7 +120,7 @@ export function isIdEnabled(profile: DeviceProfile, id: string): boolean {
 	return hasFeature(profile, featureOfId(id))
 }
 
-/** 按产品档案裁剪 action / feedback / preset 定义表 */
+/** Filter action / feedback / preset definitions by product profile. */
 export function filterByProfile<T>(definitions: Record<string, T>, profile: DeviceProfile): Record<string, T> {
 	const result: Record<string, T> = {}
 	for (const [id, def] of Object.entries(definitions)) {

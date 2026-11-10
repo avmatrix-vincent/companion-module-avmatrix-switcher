@@ -1,43 +1,58 @@
 import { Regex, type SomeCompanionConfigField } from '@companion-module/base'
 
-// 设备控制协议使用的固定端口，无需用户配置
+// Fixed UDP port used by the device control protocol (not user configurable)
 export const DEVICE_PORT = 7000
 
-// 设备型号 -> 显示名 / Dev_Type / 协议族 / 功能集 统一由 devices 目录维护
-// 新增型号只需修改 src/devices/profiles.ts
-export { resolveDeviceModel } from './devices/index.js'
+// Model -> display name / Dev_Type / protocol family / feature set is maintained in src/devices
+// Add a new model by editing src/devices/profiles.ts only
+import { DEVICE_PROFILES, resolveDeviceModel } from './devices/index.js'
+export { resolveDeviceModel, DEVICE_PROFILES }
 
 export interface ModuleConfig {
-	/** Device 下拉选中的设备 IP（来自 UDP 扫描结果） */
+	/** Device IP selected in the Device dropdown (from UDP discovery) */
 	device: string
-	/** Target IP，可手动编辑；连接时以该值为准 */
+	/** Target IP, editable by hand; the connection always uses this value */
 	host: string
-	/** 上次扫描到的设备列表，持久化保存，避免重启后下拉框为空 */
+	/** Whether the manual Device Model should be used instead of the scan result */
+	manualModel?: boolean
+	/** Manual device model (profile id), used when manualModel is enabled and the device is not discovered */
+	deviceModel?: string
+	/** Devices found by the last scan, persisted so the dropdown is not empty after a restart */
 	devices?: SavedDevice[]
 }
 
-/** 持久化到 config 的设备条目 */
+/** Device entry persisted in the config */
 export interface SavedDevice {
 	host: string
 	name: string
-	/** 设备 MAC，心跳包与断线判定必需；扫描时写入 */
+	/** Device MAC, required for heartbeat and disconnect detection; written by the scan */
 	mac?: string
-	/** 设备类型（心跳包 Dev_Type 用）；扫描时写入 */
+	/** Device type (used as heartbeat Dev_Type); written by the scan */
 	productType?: number
-	/** 心跳报文用的 Dev_Type（按型号映射）；扫描时写入 */
+	/** Heartbeat Dev_Type (mapped from the model); written by the scan */
 	udpType?: number
-	/** 设备原始型号（如 VS0617E），用于按映射表重算 Dev_Type */
+	/** Raw model code (e.g. VS0617E), used to recompute Dev_Type from the mapping table */
 	rawModel?: string
 }
 
-/** Device 下拉的一个候选项 */
+/** One entry of the Device dropdown */
 export interface DeviceChoice {
 	host: string
 	label: string
 }
 
-export function GetConfigFields(devices: DeviceChoice[], current?: ModuleConfig): SomeCompanionConfigField[] {
-	// 首个选项为占位项，保证下拉始终有可选值（扫描到设备后会被替换）
+/** Product model detected from the scan, shown in the AUTO SCAN entry */
+export interface AutoModelChoice {
+	id: string
+	name: string
+}
+
+export function GetConfigFields(
+	devices: DeviceChoice[],
+	autoModel?: AutoModelChoice,
+	current?: ModuleConfig,
+): SomeCompanionConfigField[] {
+	// The first option is a placeholder so the dropdown always has a value (replaced once a device is found)
 	const choices =
 		devices.length > 0
 			? devices.map((d) => ({ id: d.host, label: d.label }))
@@ -45,8 +60,16 @@ export function GetConfigFields(devices: DeviceChoice[], current?: ModuleConfig)
 
 	const defaultDevice = current?.device && choices.some((c) => c.id === current.device) ? current.device : choices[0].id
 
-	// Target IP 与所选 Device 的 IP 保持一致；用户手动改过则保留其输入
+	// Target IP follows the selected Device; a manually edited value is kept
 	const defaultHost = current?.host || current?.device || devices[0]?.host || ''
+
+	// Manual model selection. The first entry follows the scan: it shows the detected model, so the
+	// user can see what AUTO SCAN resolved to; when nothing was found the user must pick a model.
+	const autoLabel = autoModel ? `AUTO SCAN (${autoModel.name})` : 'AUTO SCAN (no device found)'
+	const modelChoices = [
+		{ id: '', label: autoLabel },
+		...DEVICE_PROFILES.map((p) => ({ id: p.id, label: p.displayName })),
+	]
 
 	return [
 		{
@@ -66,6 +89,27 @@ export function GetConfigFields(devices: DeviceChoice[], current?: ModuleConfig)
 			regex: Regex.IP,
 			default: defaultHost,
 			tooltip: 'IP of the selected device; can be edited manually (useful when the device is on another subnet)',
+		},
+		{
+			type: 'checkbox',
+			id: 'manualModel',
+			label: 'Manual Device Model',
+			width: 12,
+			default: current?.manualModel ?? false,
+			tooltip:
+				'Turn on to always use the model selected below, even when the scan finds the device. Leave off to always use the scan result.',
+		},
+		{
+			type: 'dropdown',
+			id: 'deviceModel',
+			label: 'Device Model',
+			width: 12,
+			choices: modelChoices,
+			default: current?.deviceModel ?? '',
+			// Only relevant when the manual switch above is on
+			isVisible: (options) => !!options.manualModel,
+			tooltip:
+				'Used whenever Manual Device Model is on. Select the model that matches the hardware (for example SHARK H4K) so the correct protocol is used.',
 		},
 	]
 }

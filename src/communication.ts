@@ -13,32 +13,32 @@ export interface DeviceInfo {
 	mac: string
 	sn: string
 	productType: number
-	/** 心跳报文用的 Dev_Type（按型号映射，与上位机 get_udp_model_index 一致） */
+	/** Dev_Type used in heartbeat packets (mapped from the model, same as the host app get_udp_model_index) */
 	udpType: number
 	protocolVer: number
 	lastSeen: number
 }
 
 /**
- * 产品类型字节含义（与设备协议一致，字节偏移 22）
- * 参考上位机实现：["Unknow", "Switcher", "Encoder", "Chroma"]
+ * Meaning of the product type byte (byte offset 22, per the device protocol).
+ * Reference host app: ["Unknow", "Switcher", "Encoder", "Chroma"]
  */
 export const PRODUCT_TYPE_NAMES = ['Unknow', 'Switcher', 'Encoder', 'Chroma']
 
 export function getProductTypeName(productType: number): string {
-	// H4K 系列在类型字段直接标识具体产品（0x06/0x07=H4K PLUS，0x08=H4K）
+	// The H4K family identifies the exact product in the type field (0x06/0x07=H4K PLUS, 0x08=H4K)
 	const extended: Record<number, string> = { 6: 'SHARK H4K PLUS', 7: 'SHARK H4K PLUS', 8: 'SHARK H4K' }
 	return extended[productType] ?? PRODUCT_TYPE_NAMES[productType] ?? `Unknown(${productType})`
 }
 
-// 设备型号 -> 心跳报文 Dev_Type 的映射已迁移至 src/devices/profiles.ts（按产品档案维护），
-// 这里保留原有导出，避免影响既有调用方。
+// Model -> heartbeat Dev_Type mapping now lives in src/devices/profiles.ts (per product profile);
+// this re-export is kept for existing callers.
 export { getUdpModelIndex }
 
-/** 扫描总时长上限，超出后强制结束，避免 Promise 悬挂导致后续扫描被互斥锁卡死 */
+/** Max scan duration; the scan is force-finished afterwards so a hung Promise never blocks later scans */
 const SCAN_TIMEOUT_MS = 10000
 
-/** MAC 是否有效（形如 aa:bb:cc:dd:ee:ff 且非全零） */
+/** Whether a MAC is valid (aa:bb:cc:dd:ee:ff and not all zero) */
 export function isValidMac(mac: string | undefined): boolean {
 	return /^([0-9a-f]{2}:){5}[0-9a-f]{2}$/i.test((mac ?? '').trim()) && !/^00:00:00:00:00:00$/i.test((mac ?? '').trim())
 }
@@ -53,14 +53,14 @@ export interface ParsedPacket {
 }
 
 export class UDPPacker {
-	/** 报文头类型：0x00 主机下发指令，0x01 设备响应，0x02 设备主动上报 */
+	/** Packet type: 0x00 command from host, 0x01 device response, 0x02 device active report */
 	static readonly TYPE_COMMAND = 0x00
 	static readonly TYPE_RESPONSE = 0x01
 	static readonly TYPE_REPORT = 0x02
 
 	/**
-	 * 生成扫描（发现）报文
-	 * 参考上位机 _gen_discover_packet：index=0x0001, session=0x00000001, cmd=0xFFFF, data=[0xFF]
+	 * Build a discovery packet.
+	 * Reference host app _gen_discover_packet: index=0x0001, session=0x00000001, cmd=0xFFFF, data=[0xFF]
 	 */
 	static packDiscover(): Buffer {
 		const data = Buffer.from([0xff])
@@ -68,10 +68,10 @@ export class UDPPacker {
 	}
 
 	/**
-	 * 生成心跳报文：cmd=0xEEEE, data=[Dev_Type(1)] + MAC(6)，共 7 字节。
-	 * 与上位机 avm_ccp.py 的 send_heartbeat_instruction 完全一致：
+	 * Build a heartbeat packet: cmd=0xEEEE, data=[Dev_Type(1)] + MAC(6), 7 bytes in total.
+	 * Identical to send_heartbeat_instruction in the host app avm_ccp.py:
 	 *   _cmd = 0xEEEE; _data = [device_type] + mac_addr
-	 * 注意：心跳数据只有 Dev_Type + MAC，不含 Param_Vaild（Param_Vaild 仅数据指令用）。
+	 * Note: heartbeat data only carries Dev_Type + MAC, no Param_Vaild (that is only used by data commands).
 	 */
 	static packHeartbeat(deviceType: number, mac: string, index: number = 1, session: number = 1): Buffer {
 		const macBytes = Buffer.from(mac.split(':').map((b) => parseInt(b, 16)))
@@ -80,9 +80,9 @@ export class UDPPacker {
 	}
 
 	/**
-	 * 按 AVMATRIX CCP 协议封包
-	 * 字段顺序（与 avm_ccp.py command_data_packing 一致）：
-	 * 包头(2) 版本(2) 总长(2) 序号index(2) 填充(8) 类型(1) cmd(2) session(4) 数据长度(2) 数据 校验和(2) 包尾(2)
+	 * Pack a packet following the AVMATRIX CCP protocol.
+	 * Field order (same as avm_ccp.py command_data_packing):
+	 * header(2) version(2) total length(2) index(2) padding(8) type(1) cmd(2) session(4) data length(2) data checksum(2) tail(2)
 	 */
 	static packCommand(
 		cmd: number,
@@ -99,22 +99,22 @@ export class UDPPacker {
 		const packet = Buffer.alloc(totalLength)
 		let offset = 0
 
-		packet.writeUInt16BE(0xa55a, offset) // 包头
+		packet.writeUInt16BE(0xa55a, offset) // header
 		offset += 2
-		packet.writeUInt16BE(0x0100, offset) // 版本
+		packet.writeUInt16BE(0x0100, offset) // version
 		offset += 2
-		packet.writeUInt16BE(totalLength, offset) // 总长度
+		packet.writeUInt16BE(totalLength, offset) // total length
 		offset += 2
-		packet.writeUInt16BE(index, offset) // 数据包序号
+		packet.writeUInt16BE(index, offset) // packet index
 		offset += 2
-		offset += 8 // 8字节填充
-		packet.writeUInt8(type, offset) // 报文类型
+		offset += 8 // 8-byte padding
+		packet.writeUInt8(type, offset) // packet type
 		offset += 1
-		packet.writeUInt16BE(cmd, offset) // 指令值
+		packet.writeUInt16BE(cmd, offset) // command code
 		offset += 2
 		packet.writeUInt32BE(session, offset) // session
 		offset += 4
-		packet.writeUInt16BE(data.length, offset) // 数据长度
+		packet.writeUInt16BE(data.length, offset) // data length
 		offset += 2
 		data.copy(packet, offset)
 		offset += data.length
@@ -125,7 +125,7 @@ export class UDPPacker {
 		}
 		packet.writeUInt16BE(checksum & 0xffff, offset)
 		offset += 2
-		packet.writeUInt16BE(0xa66a, offset) // 包尾
+		packet.writeUInt16BE(0xa66a, offset) // tail
 
 		return packet
 	}
@@ -133,17 +133,17 @@ export class UDPPacker {
 
 export class UDPParser {
 	/**
-	 * 参考上位机解析逻辑（avm_ccp.py packet_parser）：
-	 * - 上位机不校验包头，直接解析
-	 * - 设备返回的响应包头是 0x5AA5，而我们发送的是 0xA55A
-	 * - 校验：总长度 == 实际长度，且数据长度 == 总长度 - 29，最后比对校验和
+	 * Reference host app parsing (avm_ccp.py packet_parser):
+	 * - the host app does not validate the header, it parses directly
+	 * - the device reply header is 0x5AA5 while we send 0xA55A
+	 * - checks: total length == actual length, data length == total length - 29, then compare the checksum
 	 */
 	static parse(data: Buffer): ParsedPacket | null {
 		if (data.length < 29) {
 			return null
 		}
 
-		// 设备响应包头是 0x5AA5，不强制校验包头
+		// The device reply header is 0x5AA5, so the header is not validated
 		const packetLength = data.readUInt16BE(4)
 		if (packetLength !== data.length) {
 			return null
@@ -156,7 +156,7 @@ export class UDPParser {
 		const session = data.readUInt32BE(19)
 		const dataLength = data.readUInt16BE(23)
 
-		// 与上位机一致：数据长度必须严格等于总长度减 29
+		// Same as the host app: data length must be exactly total length minus 29
 		if (dataLength !== packetLength - 29) {
 			return null
 		}
@@ -188,7 +188,7 @@ export class UDPParser {
 		const info: Partial<DeviceInfo> = {}
 		if (data.length < 53) return info
 
-		// 字段偏移与参考上位机 (avm_ccp.py) 一致
+		// Field offsets match the reference host app (avm_ccp.py)
 		info.vendor = data.slice(0, 6).toString('ascii').replace(/\0/g, '')
 		const productName = data.slice(6, 22).toString('ascii').replace(/\0/g, '')
 		info.productType = data.readUInt8(22)
@@ -210,7 +210,7 @@ export class UDPParser {
 	}
 
 	/**
-	 * 解析心跳(0xEEEE)回包的数据（参考 PSV0617 文档 3.3.3）：
+	 * Parse the data of a heartbeat (0xEEEE) reply (see PSV0617 doc 3.3.3):
 	 *   vendor(6) + Product_name(16) + MAC(6)
 	 */
 	static parseHeartbeatReply(data: Buffer): { vendor: string; productName: string; mac: string } | null {
@@ -230,8 +230,10 @@ export interface CommunicationOptions {
 	timeout?: number
 	scanPort?: number
 	heartbeatInterval?: number
-	/** 无心跳指令的协议族使用的探活指令（Data 为空），如 H4K 的 0x0001 */
+	/** Liveness probe command for families without a heartbeat (empty Data), e.g. H4K 0x0001 */
 	probeCommand?: number
+	/** Report packets (Pack_Type=2) are already handled by onReport; skip the generic onData path (H4K) */
+	skipReportDataCallback?: boolean
 	onLog?: (level: 'info' | 'error' | 'debug' | 'warn', message: string) => void
 }
 
@@ -244,16 +246,22 @@ export interface DeviceCallback {
 export class CommunicationManager {
 	private udp: UDPHelper | undefined
 	private discoverySocket: dgram.Socket | undefined
-	/** 扫描期间为每个接口创建的 socket，用于 disconnect/timeout 统一回收 */
+	/** Sockets created per interface during a scan, closed together on disconnect/timeout */
 	private scanSockets: dgram.Socket[] = []
+	/** Set once disconnect() aborts a scan, so pending rounds never send on closed sockets */
+	private scanAborted = false
+	/** Timers created by a scan (round interval / finish delay / timeout) */
+	private scanTimers: NodeJS.Timeout[] = []
+	/** Resolve callback of the scan in progress, used to end it early */
+	private scanFinish: (() => void) | undefined
 	private options: CommunicationOptions
 	private isConnected = false
 	private discoveredDevices: Map<string, DeviceInfo> = new Map()
-	/** 当前连接的目标设备信息 */
+	/** Target device of the current connection */
 	private connectedDevice: DeviceInfo | undefined
 	private callbacks: DeviceCallback[] = []
 	private sessionCounter = 1
-	/** 报文序号，参考上位机 _index，每发一条指令自增 */
+	/** Packet index (reference: host app `_index`); incremented per command, wrapped to 1..0xffff */
 	private indexCounter = 0
 	private heartbeatTimer: NodeJS.Timeout | undefined
 	private heartbeatMissed = 0
@@ -305,6 +313,20 @@ export class CommunicationManager {
 			this.udp.destroy()
 			this.udp = undefined
 		}
+		// L1: stop a running scan (timers + sockets) so disabling the connection
+		// during discovery does not leave broadcast sockets alive.
+		this.abortScan()
+		this.isConnected = false
+		this.callbacks = []
+	}
+
+	/** Track a timer created by a scan so disconnect() can cancel it. */
+	private scanLater(fn: () => void, ms: number): void {
+		this.scanTimers.push(setTimeout(fn, ms))
+	}
+
+	/** Close every socket owned by the scan. */
+	private closeScanSockets(): void {
 		if (this.discoverySocket) {
 			try {
 				this.discoverySocket.close()
@@ -313,19 +335,44 @@ export class CommunicationManager {
 			}
 			this.discoverySocket = undefined
 		}
-		// 回收扫描期间为每个接口创建的 socket，避免 disconnect 后仍在发送/监听
-		if (this.scanSockets.length > 0) {
-			for (const sock of this.scanSockets) {
-				try {
-					sock.close()
-				} catch {
-					/* ignore */
-				}
+		for (const sock of this.scanSockets) {
+			try {
+				sock.close()
+			} catch {
+				/* ignore */
 			}
-			this.scanSockets = []
 		}
-		this.isConnected = false
-		this.callbacks = []
+		this.scanSockets = []
+	}
+
+	/**
+	 * Stop a running scan: cancel pending rounds, close all scan sockets and
+	 * resolve scanNetwork() early. Safe to call when no scan is running.
+	 */
+	private abortScan(): void {
+		this.scanAborted = true
+		for (const t of this.scanTimers) clearTimeout(t)
+		this.scanTimers = []
+		this.closeScanSockets()
+		const finish = this.scanFinish
+		this.scanFinish = undefined
+		finish?.()
+	}
+
+	/**
+	 * Next packet index. The field is 16-bit, so it must wrap: otherwise the
+	 * 65,536th command throws ERR_OUT_OF_RANGE and every later send fails.
+	 */
+	private nextIndex(): number {
+		this.indexCounter = (this.indexCounter % 0xffff) + 1
+		return this.indexCounter
+	}
+
+	/** Next session id, wrapped as an unsigned 32-bit value (first value stays 1). */
+	private nextSession(): number {
+		const session = this.sessionCounter
+		this.sessionCounter = (this.sessionCounter + 1) >>> 0
+		return session
 	}
 
 	public async sendCommand(cmd: number, data: Buffer): Promise<boolean> {
@@ -337,19 +384,19 @@ export class CommunicationManager {
 		}
 
 		try {
-			const session = this.sessionCounter++
-			const packet = UDPPacker.packCommand(cmd, data, ++this.indexCounter, session)
+			const session = this.nextSession()
+			const packet = UDPPacker.packCommand(cmd, data, this.nextIndex(), session)
 
 			if (this.udp) {
 				this.log(
 					'debug',
 					`[Send] Command: 0x${cmd.toString(16).padStart(4, '0')}, Session: ${session}, Length: ${packet.length} bytes`,
 				)
-				// 打印发出的整包数据（hex），仅本地调试开启（AVM_LOG_RAW_PACKETS=1）
+				// Print the whole outgoing packet (hex) only when local debugging is enabled (AVM_LOG_RAW_PACKETS=1)
 				if (LOG_RAW_PACKETS) this.log('debug', `[Send] Packet hex: ${packet.toString('hex')}`)
 				this.log('debug', `[Send] Target: ${this.options.host}:${this.options.port}`)
-				// 使用 await，令发送失败能在 try/catch 中处理，避免 Node 22 默认的
-				// unhandled rejection 直接杀死模块进程（网卡掉线 / 路由不可达时会 reject）。
+				// Use await so a failed send is handled by try/catch instead of becoming an
+				// unhandled rejection that kills the module process on Node 22 (link down / no route).
 				await this.udp.send(packet)
 				return true
 			}
@@ -361,60 +408,15 @@ export class CommunicationManager {
 		}
 	}
 
-	public async sendCommandWithCallback(
-		cmd: number,
-		data: Buffer,
-		callback: (response: ParsedPacket) => void,
-	): Promise<boolean> {
-		if (!this.isConnected) {
-			this.log('error', 'Not connected')
-			return false
-		}
-
-		const session = this.sessionCounter++
-		const packet = UDPPacker.packCommand(cmd, data, ++this.indexCounter, session)
-
-		this.callbacks.push({
-			session,
-			cmd,
-			callback: (rawData) => {
-				const parsed = UDPParser.parse(rawData)
-				if (parsed) {
-					callback(parsed)
-				}
-			},
-		})
-
-		try {
-			if (this.udp) {
-				await this.udp.send(packet)
-				this.log('debug', `Sent command with callback: 0x${cmd.toString(16).padStart(4, '0')}, session: ${session}`)
-				return true
-			}
-			return false
-		} catch (error) {
-			this.log('error', `Send failed: ${(error as Error).message}`)
-			return false
-		}
-	}
-
-	public async send(data: string | Buffer): Promise<boolean> {
-		const buffer = typeof data === 'string' ? Buffer.from(data) : data
-		return this.sendCommand(0x0001, buffer)
-	}
-
 	/**
-	 * 获取所有 IPv4 网络接口的子网广播地址
-	 * 与上位机一致：为每个接口计算正确的广播地址
-	 */
-	/**
-	 * 参考上位机实现：
-	 * 上位机使用 socket.getaddrinfo(hostname, None) 获取每个IPv4接口的IP地址
-	 * 然后为每个接口创建独立的 AvmScannerPhy，绑定到该接口IP并系统分配端口
-	 * 所有接口都向 255.255.255.255:7000 发送广播
+	 * Collect the broadcast address of every IPv4 interface.
+	 * Reference host app:
+	 * socket.getaddrinfo(hostname, None) is used to get the IP of each IPv4 interface,
+	 * then one AvmScannerPhy is created per interface, bound to that IP with a system-assigned port,
+	 * and every interface broadcasts to 255.255.255.255:7000.
 	 *
-	 * Node.js中我们使用 os.networkInterfaces() 获取接口信息
-	 * 关键：绑定到接口IP而不是0.0.0.0，这样Windows会走正确的网卡
+	 * In Node.js os.networkInterfaces() provides the interface list.
+	 * Key point: bind to the interface IP instead of 0.0.0.0 so Windows uses the correct NIC.
 	 */
 	private getInterfaceAddresses(): { iface: string; address: string }[] {
 		const results: { iface: string; address: string }[] = []
@@ -431,10 +433,12 @@ export class CommunicationManager {
 	}
 
 	/**
-	 * 扫描网络发现设备
-	 * 参考上位机实现：为每个网络接口创建独立的socket，绑定到接口IP，向255.255.255.255广播
+	 * Discover devices on the network.
+	 * Reference host app: one socket per network interface, bound to the interface IP, broadcasting to 255.255.255.255.
 	 */
 	public async scanNetwork(): Promise<void> {
+		this.scanAborted = false
+		this.scanTimers = []
 		const scanPort = this.options.scanPort || 7000
 		const interfaceAddrs = this.getInterfaceAddresses()
 
@@ -452,38 +456,26 @@ export class CommunicationManager {
 
 		this.discoveredDevices.clear()
 
-		// 参考上位机：每个接口创建独立socket，绑定到接口IP，系统分配端口
-		// 所有socket都向 255.255.255.255:7000 发送广播
+		// Reference host app: one socket per interface, bound to the interface IP with a system-assigned port;
+		// every socket broadcasts to 255.255.255.255:7000
 		return new Promise((resolve) => {
-			// 兜底超时：避免 socket bind 回调未触发等原因导致 Promise 永不结束
+			// Safety timeout: a bind callback that never fires must not leave the Promise pending forever
 			let settled = false
 			const finish = () => {
 				if (settled) return
 				settled = true
 				clearTimeout(timeoutHandle)
+				this.scanFinish = undefined
 				resolve()
 			}
+			this.scanFinish = finish
 			const timeoutHandle = setTimeout(() => {
 				this.log('warn', `[Scan] Discovery timed out after ${SCAN_TIMEOUT_MS}ms`)
-				if (this.discoverySocket) {
-					try {
-						this.discoverySocket.close()
-					} catch {
-						/* ignore */
-					}
-					this.discoverySocket = undefined
-				}
-				// 确保任何已绑定的接口 socket 在超时时也被回收，避免泄漏
-				for (const sock of this.scanSockets) {
-					try {
-						sock.close()
-					} catch {
-						/* ignore */
-					}
-				}
-				this.scanSockets = []
-				finish()
+				// Abort through the same path as disconnect(): sets scanAborted, clears pending round
+				// timers and closes every socket, so no later round can send on a closed socket.
+				this.abortScan()
 			}, SCAN_TIMEOUT_MS)
+			this.scanTimers.push(timeoutHandle)
 
 			try {
 				const broadcastTarget = '255.255.255.255'
@@ -492,8 +484,8 @@ export class CommunicationManager {
 				this.log('debug', `[Scan] Send discovery packet (cmd=0xFFFF, data=[FF]) -> ${broadcastTarget}:${scanPort}`)
 				if (LOG_RAW_PACKETS) this.log('debug', `[Scan] Packet hex: ${discoverPacket.toString('hex')}`)
 
-				// 为每个网络接口创建独立的socket
-				// 同时记到 this.scanSockets，以便 disconnect/timeout 统一回收
+				// Create one socket per network interface and register it in this.scanSockets,
+				// so disconnect/timeout can close them together
 				this.scanSockets = []
 				const sockets: dgram.Socket[] = this.scanSockets
 
@@ -512,13 +504,13 @@ export class CommunicationManager {
 						`[Scan] Parsed header - type: 0x${parsed.type.toString(16)}, cmd: 0x${parsed.cmd.toString(16)}, session: ${parsed.session}, dataLen: ${parsed.data.length}`,
 					)
 
-					// 发现响应应该是 cmd=0xFFFF 的响应
+					// A discovery response must be a cmd=0xFFFF reply
 					if (parsed.cmd !== 0xffff) {
 						this.log('debug', `[Scan] Ignoring non-discovery response cmd=0x${parsed.cmd.toString(16)}`)
 						return
 					}
 
-					// 逐字段打印设备信息解析过程，便于排查型号识别问题
+					// Log every parsed field to make model identification issues easier to diagnose
 					const deviceInfo = UDPParser.parseDeviceInfo(parsed.data)
 					this.log('debug', `[Scan] Parsed device info (payload ${parsed.data.length} bytes):`)
 					this.log('debug', `[Scan]   vendor      = "${deviceInfo.vendor ?? ''}"`)
@@ -536,7 +528,7 @@ export class CommunicationManager {
 						this.log('warn', '[Scan] Model field is empty, cannot map to a device list entry')
 					}
 
-					// 型号 + 设备类型一起匹配（H4K 系 6/7/8 靠类型更可靠）
+					// Match model + device type together (the H4K 6/7/8 ids are more reliable)
 					const modelIndex = getUdpModelIndex(deviceInfo.model, deviceInfo.productType)
 					const device: DeviceInfo = {
 						host: rinfo.address,
@@ -554,7 +546,7 @@ export class CommunicationManager {
 
 					const deviceKey = device.sn || rinfo.address
 					if (!this.discoveredDevices.has(deviceKey)) {
-						// 仅首次发现时打印，避免同一设备被重复响应时刷屏（看起来像重复扫描）
+						// Log only on first discovery, so repeated replies do not flood the log
 						this.log(
 							'debug',
 							`[Scan] Device discovered: host=${device.host}, model=${device.model}, name=${device.name}, sn=${device.sn}, mac=${device.mac}`,
@@ -570,31 +562,33 @@ export class CommunicationManager {
 				}
 
 				if (interfaceAddrs.length === 0) {
-					// 没有检测到接口，使用0.0.0.0兜底
+					// No interface detected: fall back to 0.0.0.0
 					this.log('warn', 'No interfaces detected, falling back to 0.0.0.0')
-					this.discoverySocket = dgram.createSocket({ type: 'udp4', reuseAddr: true })
-					this.discoverySocket.on('message', onMessage)
-					this.discoverySocket.on('error', onError)
-					this.discoverySocket.bind(0, '0.0.0.0', () => {
-						this.sendDiscoveryScans([this.discoverySocket!], discoverPacket, scanPort, broadcastTarget, finish)
+					const sock = dgram.createSocket({ type: 'udp4', reuseAddr: true })
+					this.discoverySocket = sock
+					sock.on('message', onMessage)
+					sock.on('error', onError)
+					sock.bind(0, '0.0.0.0', () => {
+						this.sendDiscoveryScans([sock], discoverPacket, scanPort, broadcastTarget, finish)
 					})
 				} else {
-					// 为每个接口创建socket
+					// Create one socket per network interface
 					let boundCount = 0
 					for (const iface of interfaceAddrs) {
 						const sock = dgram.createSocket({ type: 'udp4', reuseAddr: true })
+						// Register on creation, so a socket whose bind fails is still closed on timeout/abort
+						sockets.push(sock)
 						sock.on('message', onMessage)
 						sock.on('error', onError)
 
-						// 绑定到接口IP，系统自动分配端口（与上位机一致）
+						// Bind to the interface IP with a system-assigned port (same as the host app)
 						sock.bind(0, iface.address, () => {
 							const addr = sock.address()
 							this.log('debug', `Socket bound to [${iface.iface}] ${addr.address}:${addr.port}`)
 							sock.setBroadcast(true)
-							sockets.push(sock)
 							boundCount++
 
-							// 所有socket绑定完成后开始发送
+							// All sockets are bound, start sending
 							if (boundCount === interfaceAddrs.length) {
 								this.sendDiscoveryScans(sockets, discoverPacket, scanPort, broadcastTarget, finish)
 							}
@@ -609,8 +603,8 @@ export class CommunicationManager {
 	}
 
 	/**
-	 * 发送扫描包（2轮，间隔1秒）
-	 * @param finish 结束回调，负责清理兜底超时并 resolve
+	 * Send the scan packets (4 rounds, 1 s apart).
+	 * @param finish end callback that clears the safety timeout and resolves
 	 */
 	private sendDiscoveryScans(
 		sockets: dgram.Socket[],
@@ -619,58 +613,73 @@ export class CommunicationManager {
 		broadcastTarget: string,
 		finish: () => void,
 	): void {
-		const maxScans = 4 // 与上位机 Scanner._MAX_TIMES 一致，提高发现可靠性
+		const maxScans = 4 // Same as the host app Scanner._MAX_TIMES, improving discovery reliability
 		let scanCount = 0
 
 		const sendScan = () => {
+			if (this.scanAborted) return
 			if (scanCount >= maxScans) return
 			scanCount++
 			const currentScan = scanCount
 
-			// 每个socket都发送广播包
+			// Every socket sends the broadcast packet
 			let sentCount = 0
 			for (const sock of sockets) {
-				sock.send(packet, 0, packet.length, scanPort, broadcastTarget, (err) => {
-					if (err) {
-						this.log('error', `Scan ${currentScan}/${maxScans} failed: ${err.message}`)
-					} else {
-						const addr = sock.address()
-						this.log(
-							'debug',
-							`Scan ${currentScan}/${maxScans} sent from ${addr.address}:${addr.port} -> ${broadcastTarget}:${scanPort}`,
-						)
-					}
-					sentCount++
-					// 所有socket发送完毕，1秒后发下一轮
-					if (sentCount >= sockets.length && currentScan < maxScans) {
-						setTimeout(sendScan, 1000)
-					}
-					// 最后一轮发送完毕，等待响应后结束
-					if (sentCount >= sockets.length && currentScan === maxScans) {
-						setTimeout(() => {
-							this.log('debug', '========================================')
-							this.log('debug', `[Scan] Discovery complete - Found ${this.discoveredDevices.size} device(s)`)
-							for (const [key, dev] of this.discoveredDevices) {
+				try {
+					sock.send(packet, 0, packet.length, scanPort, broadcastTarget, (err) => {
+						if (err) {
+							this.log('error', `Scan ${currentScan}/${maxScans} failed: ${err.message}`)
+						} else {
+							// The socket may be closed between send() and this callback; address() throws
+							// synchronously (ERR_SOCKET_DGRAM_NOT_RUNNING), so keep it guarded and let the round continue.
+							try {
+								const addr = sock.address()
 								this.log(
 									'debug',
-									`[Scan]   [${key}] model="${dev.model}" type=${getProductTypeName(dev.productType)} name="${dev.name}" at ${dev.host}:${dev.port}`,
+									`Scan ${currentScan}/${maxScans} sent from ${addr.address}:${addr.port} -> ${broadcastTarget}:${scanPort}`,
+								)
+							} catch (error) {
+								this.log(
+									'debug',
+									`Scan ${currentScan}/${maxScans} sent (socket already closed: ${(error as Error).message})`,
 								)
 							}
-							this.log('debug', '========================================')
-
-							for (const sock of sockets) {
-								try {
-									sock.close()
-								} catch {
-									/* ignore */
+						}
+						sentCount++
+						// All sockets have sent; schedule the next round in 1 s
+						if (sentCount >= sockets.length && currentScan < maxScans) {
+							this.scanLater(sendScan, 1000)
+						}
+						// Last round sent; wait for replies before finishing
+						if (sentCount >= sockets.length && currentScan === maxScans) {
+							this.scanLater(() => {
+								this.log('debug', '========================================')
+								this.log('debug', `[Scan] Discovery complete - Found ${this.discoveredDevices.size} device(s)`)
+								for (const [key, dev] of this.discoveredDevices) {
+									this.log(
+										'debug',
+										`[Scan]   [${key}] model="${dev.model}" type=${getProductTypeName(dev.productType)} name="${dev.name}" at ${dev.host}:${dev.port}`,
+									)
 								}
-							}
-							this.discoverySocket = undefined
-							this.scanSockets = []
-							finish()
-						}, 1500)
-					}
-				})
+								this.log('debug', '========================================')
+
+								for (const s of sockets) {
+									try {
+										s.close()
+									} catch {
+										/* ignore */
+									}
+								}
+								this.discoverySocket = undefined
+								this.scanSockets = []
+								finish()
+							}, 1500)
+						}
+					})
+				} catch (error) {
+					// dgram throws synchronously (ERR_SOCKET_DGRAM_NOT_RUNNING) if the socket is already closed
+					this.log('debug', `Scan ${currentScan}/${maxScans} skipped on a closed socket: ${(error as Error).message}`)
+				}
 			}
 		}
 
@@ -681,7 +690,7 @@ export class CommunicationManager {
 		this.stopHeartbeat()
 		this.heartbeatMissed = 0
 
-		// 立即探测一次，避免等待一个完整周期才知道设备是否在线
+		// Probe immediately, so the device state is known without waiting a full interval
 		void this.sendHeartbeat()
 
 		this.heartbeatTimer = setInterval(() => {
@@ -699,27 +708,27 @@ export class CommunicationManager {
 	}
 
 	/**
-	 * 存活探测（心跳）——参考上位机 UDP 流程：
-	 * 心跳指令 0xEEEE，数据 = [Dev_Type(1)] + MAC(6)，序号自增、session 随机，
-	 * 单播直接发给当前目标设备（对应上位机的 DevicePhy）。
+	 * Liveness probe (heartbeat), following the host app UDP flow:
+	 * heartbeat command 0xEEEE, data = [Dev_Type(1)] + MAC(6), increasing index and a random session,
+	 * sent unicast directly to the target device (the host app DevicePhy).
 	 *
-	 * 连接是 UDP（无连接），socket 就绪不代表在线：收到任意合法报文即视为在线。
+	 * UDP is connectionless: a ready socket does not mean the device is online; any valid packet marks it alive.
 	 */
 	private async sendHeartbeat(): Promise<void> {
 		const device = this.connectedDevice
-		// 注：manual IP 场景下 device 为 undefined，仍需按配置的 host 持续探测，
-		// 否则设备永远不会变成在线。早期这里直接 return 会造成 H2（手动 IP 永远连不上）。
+		// Note: with a manually typed IP, device is undefined but the configured host must still be probed,
+		// otherwise the device never becomes online (returning early here used to break manual IPs).
 
 		try {
 			if (!this.udp) return
 
 			const useHeartbeat = device !== undefined && isValidMac(device.mac)
 			const probeCommand = this.options.probeCommand
-			// 优先级：有 MAC → 0xEEEE 心跳；协议族指定探活指令 → 用该指令；否则退回 0xFFFF 发现包
+			// Priority: MAC present -> 0xEEEE heartbeat; family probe command -> that command; else the 0xFFFF discovery packet
 			let packet: Buffer
 			let probeLabel: string
 			if (useHeartbeat && device) {
-				// 参考样例：心跳 index=1、session=1 固定
+				// Reference sample: heartbeat index=1, session=1 fixed
 				packet = UDPPacker.packHeartbeat(device.udpType ?? 0xff, device.mac, 1, 1)
 				probeLabel = '0xEEEE'
 			} else if (probeCommand !== undefined) {
@@ -735,14 +744,14 @@ export class CommunicationManager {
 				`[Heartbeat] Probe -> ${this.options.host}:${this.options.port} (${probeLabel}), misses=${this.heartbeatMissed}`,
 			)
 
-			// 设备无响应时记录失败次数（原始报文仅本地调试输出）
+			// Record failed probes (raw packets only when local debugging is enabled)
 			if (this.heartbeatMissed > 0) {
 				const raw = LOG_RAW_PACKETS ? ` - sent packet: ${packet.toString('hex')}` : ''
 				this.log('debug', `[Heartbeat] No response (misses=${this.heartbeatMissed})${raw}`)
 			}
 
-			// 发送失败（网卡掉线 / 无路由）与设备无回应一样计入 miss，
-			// 避免 M3（网络失去时连接仍为绿色）。
+			// A failed send (link down / no route) counts as a miss just like no reply,
+			// so the status cannot stay green when the network is gone.
 			try {
 				await this.udp.send(packet)
 			} catch (sendErr) {
@@ -769,8 +778,8 @@ export class CommunicationManager {
 	}
 
 	/**
-	 * 收到设备的任意合法报文即认定设备在线：
-	 * 清零失败计数，并把状态从「连接中 / 已断开」恢复为在线。
+	 * Any valid packet from the device marks it alive:
+	 * reset the miss counter and recover the status from Connecting / Disconnected to online.
 	 */
 	private markDeviceAlive(): void {
 		const wasMissed = this.heartbeatMissed
@@ -780,6 +789,10 @@ export class CommunicationManager {
 			this.isConnected = true
 			this.log('info', `[Heartbeat] Device ${this.options.host} responded, connection online`)
 			this.onStatusChangeCallback?.(InstanceStatus.Ok, 'Device responded')
+			// M1: the heartbeat stops itself after `maxHeartbeatMissed`, so restart it here.
+			// Otherwise the status can turn green again with the heartbeat still stopped,
+			// and the next dropout is never detected.
+			if (!this.heartbeatTimer) this.startHeartbeat()
 		} else if (wasMissed > 0) {
 			this.log('debug', `[Heartbeat] Device responded, miss counter reset (was ${wasMissed})`)
 		}
@@ -790,8 +803,8 @@ export class CommunicationManager {
 	}
 
 	/**
-	 * 设置当前连接的目标设备（用于日志展示与协议参数）。
-	 * 同时重置探测计数，让新目标从干净的计数开始。
+	 * Set the target device of the current connection (used for logs and protocol parameters).
+	 * The miss counter is reset so a new target starts from a clean count.
 	 */
 	public setTargetDevice(device: DeviceInfo | undefined): void {
 		this.connectedDevice = device
@@ -818,9 +831,9 @@ export class CommunicationManager {
 			this.log('debug', `UDP status_change - Status: ${status}, Message: ${message || 'none'}`)
 
 			if (status === InstanceStatus.Ok) {
-				// UDP 是「无连接」协议：socket 就绪只代表本机端口已绑定，
-				// 不代表设备在线。这里先报「连接中」，等设备回包
-				// （markDeviceAlive）才真正置为在线。
+				// UDP is connectionless: a ready socket only means the local port is bound,
+				// not that the device is online. Report "Connecting" first and wait for a
+				// reply (markDeviceAlive) before going online.
 				this.log('debug', `Socket ready for ${this.options.host}:${this.options.port}, probing device...`)
 				this.isConnected = false
 				this.onStatusChangeCallback?.(InstanceStatus.Connecting, 'Waiting for device response...')
@@ -837,7 +850,7 @@ export class CommunicationManager {
 		})
 
 		this.udp.on('data', (data) => {
-			// 收到报文的长度/摘要；原始 hex 仅本地调试输出（打包版不暴露数据包内容）
+			// Packet length/summary; raw hex only when local debugging is enabled (packaged builds never expose packet contents)
 			const recvRaw = LOG_RAW_PACKETS ? `: ${data.toString('hex')}` : ''
 			this.log('debug', `[Recv] ${data.length}B${recvRaw}`)
 			this.log('debug', '========== RECEIVED DATA START ==========')
@@ -845,10 +858,10 @@ export class CommunicationManager {
 
 			const parsed = UDPParser.parse(data)
 			if (parsed) {
-				// 收到设备的合法报文即视为在线，用于心跳存活判定与断线恢复
+				// Any valid packet marks the device alive (heartbeat liveness and disconnect recovery)
 				this.markDeviceAlive()
 
-				// 心跳(0xEEEE)回包：按协议解析 vendor / Product_name / MAC 并打印
+				// Heartbeat (0xEEEE) reply: parse vendor / Product_name / MAC and log them
 				if (parsed.cmd === 0xeeee) {
 					const hb = UDPParser.parseHeartbeatReply(parsed.data)
 					if (hb) {
@@ -881,7 +894,11 @@ export class CommunicationManager {
 					this.log('debug', 'Device report handled')
 				}
 
-				this.onDataCallback?.(parsed.data, this.options.host, this.options.port, parsed.cmd, parsed.session)
+				// L6: report packets are already handled by onReport; running the generic
+				// data path again processed every H4K report twice.
+				if (!(parsed.type === 0x02 && this.options.skipReportDataCallback)) {
+					this.onDataCallback?.(parsed.data, this.options.host, this.options.port, parsed.cmd, parsed.session)
+				}
 			} else {
 				this.log('warn', 'Invalid packet - checksum or format error')
 			}

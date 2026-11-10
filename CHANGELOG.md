@@ -1,93 +1,128 @@
 # Changelog
 
-本文件遵循 [Keep a Changelog](https://keepachangelog.com/zh-CN/1.1.0/) 规范，版本号遵循 [语义化版本](https://semver.org/lang/zh-CN/)。
+All notable changes to this project are documented in this file.
+The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
+and this project adheres to [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
 ### Planned
 
-- **NR1**: 规划迁移到 `@companion-module/base` v2.x（Companion 4.3+ / 5.0+），以获得表达式支持与最新模块 API。详见 v1.0.0 审核文档 “Next Release”。
+- **NR1**: plan the move to `@companion-module/base` v2.x (Companion 4.3+ / 5.0+) to gain expression support and the latest module API.
 
-## [1.0.1] - 2026-11-02
+## [1.0.2] - 2026-11-09
 
-针对 `companion-module-avmatrix-switcher v1.0.0` 审核（`review-avmatrix-switcher-v1.0.0-20261030-090507`）所列问题的修复版本。
-
-### Security
-
-- **C1**: `.yarnrc.yml` 补齐模板的供应链加固配置：`enableScripts: false`、`npmMinimalAgeGate: 3d`、`npmPreapprovedPackages: ["@companion-module/*"]`，阻止依赖安装脚本执行并拦截发布不到 3 天的新版本。
+Fixes for the issues raised in the v1.0.1 review.
 
 ### Fixed
 
-- **H1**: `sendCommand()` / `sendCommandWithCallback()` 改为 `await this.udp.send(...)`，发送失败（网卡掉线 / 路由不可达）不再产生未处理的 Promise rejection 导致 Node 22 崩溃，而是进入 `try/catch` 并返回 `false`。
-- **H2**: 手动填写 Target IP（跨网段、非扫描所得）时，心跳不再因缺少目标设备而跳过发送；改为按协议族 `probeCommand` 或 `0xFFFF` 发现包持续探测，并在连续 miss 后正确转为 Connection Failure。
-- **H3**: 启动扫描仅在**首次配置**（Device 与 Target IP 均为空）时自动选择设备；其余情况只刷新设备列表，保留用户已选设备/手填 Target IP，不再被扫描结果覆盖并强制重连。
-- **M1**: 扫描期间为每个网络接口创建的 UDP socket 记录到 `scanSockets`，在 `disconnect()` 与超时处理中统一关闭，修复销毁后仍发送/监听与失败扫描泄漏。
-- **M2**: 新增 `connectedHost`，`configUpdated()` 以当前实际连接的 host 判断是否需要重连，修复“把 Target IP 改回与 Device 相同值后仍发往旧地址”的问题。
-- **M3**: 心跳发送失败也计入 `heartbeatMissed`，Companion 主机断网时连接状态能正确转为 Connection Failure，不再保持绿色。
-- **M4**: 扫描结果为空时不再清空 `discoveredDevices`，保留原有设备列表与 MAC/型号信息。
-- **M5**: 扫描无设备且无 Target IP 时，状态置为 `BadConfig`（提示需填写 Target IP），不再永久停留在 Connecting。
-- **M6**: 预设（Presets）在 `init()` / `applyDeviceProfile()` 注册后常驻，不再随连接状态变化被 `setPresetDefinitions({})` 清空。
-- **L1**: `destroy()` 时清除 400ms 执行闪烁定时器 `flashTimer`。
-- **L2**: 断开/重连时复位 `blinkOn` 相位并在恢复在线后调用 `updateBlink()`，修复 FTB/MUTE/Freeze 重连后停止闪烁。
-- **L3**: 本地按下 FTB/MUTE/Freeze 翻转状态后调用 `updateBlink()`，修复“常亮不闪”。
-- **L4**: AUTO 视为瞬时动作，短暂点亮后自动释放，修复 AUTO 按钮常亮且状态反转的问题。
-- **L5**: `moveTBar()` 未连接时拒绝执行；发送失败回滚本地基准且不更新显示变量；仅在发送成功后写回 `tbar_value`。
-- **L6**: 修正 “Last Action (Flash)” 反馈的示例 key，改为真实格式（如 `set_source|source=5`，以及上报用的 `key:NN`）。
-- **L7**: PIP/LUMA/CHROMA/DSK/LOGO 状态反馈改用可读名称并补充 `description`；`connection_status` 更名为 “Device Disconnected” 并说明其语义。
-- **L8**: 移除 T-Bar Move 动作中无效的 `$(self:tbar_value)` 静态文本，改为说明文字。
-- **L9**: 配置项 tooltip 英文化（Device / Target IP）。
-- **L10**: 移除 `companion/manifest.json` 中未发布的 `legacyIds: ["szavm"]`。
-- **L11**: `[Recv]` / `[Send]` / `[Heartbeat]` / `[Report]` 等流量日志降为 `debug`，`warn` 级别不再被降级为 `info`，显著降低运行期日志噪声。
+- **H2**: wrap the 16-bit packet index (and the 32-bit session id) so commands keep working after 65,535 packets.
+- **Manual IP**: added a "Manual Device Model" switch (off by default, so the scan is always used). When enabled, the selected model always wins over the scan result; this fixes a typed Target IP that cannot be discovered falling back to the S6 PLUS (0617) protocol, which made every action fail silently on a SHARK H4K. A warning is logged when the switch is on without a model.
+- **M1**: restart the heartbeat when the device comes back, so a later dropout is still detected.
+- **L1**: keep the active scanner on the instance and abort a running scan (timers and sockets) from `destroy()` / `disconnect()`.
+- **Scan timeout**: the 10 s safety timeout now aborts through `abortScan()` (sets the abort flag, clears round timers and closes sockets), and `sendScan()` catches synchronous `dgram` errors, so a late round can no longer send on a closed socket and crash the module.
+- **L2**: register the short follow-up timers started by button presses and clear them in `destroy()`; stop the query loops once the instance is gone.
+- **L3**: build the PIP1/2/3 Adjust and LUMA Adjust presets from the active protocol (H4K defaults to IN1 as the PIP source and Clip 0).
+- **L4**: include the IP address in the Device dropdown labels so two units of the same model can be told apart.
+- **L5**: list every supported model (S6, S6 PLUS, S5, H5, H4K, H4K PLUS) in HELP.md and the manifest keywords.
+- **L6**: log `[Report 0x0110]`, `[Switch]`, `[Set]`, `[Report]`, `[Reply]` and `[Query Reply]` at debug level; H4K reports are no longer handled twice.
+- **L7**: pass the action-flash key explicitly instead of keeping it in shared state, so concurrent actions flash the correct button.
+- **Build errors**: `sendToDevice()` now catches `buildCommand()` failures and returns false instead of rejecting the action callback (same crash class as the v1.0.0 H1 fix).
+- **N2**: the Last Action (Flash) key option now resolves variables.
+- **N4**: removed unused code (`sendCommandWithCallback`, `send`, `hexOf`, the unused key-value tables, unused DeviceCommands entries and the unused preset `flashKey` field) and the remaining non-null assertion.
 
 ### Changed
 
-- **N1**: 收紧类型：`handleDeviceReport(packet: ParsedPacket)`、`getDeviceState(): DeviceState`（新增 `DeviceState` 接口），提升上报路径的类型安全。
+- **M2**: action options now store device-independent key ids (`pgm1`, `cut`, `stream2`, `pip_on_air`, ...), mapped to the active protocol key map when sent. Presets use the same ids, so buttons keep pressing the same logical key after a profile change.
+- **N1**: renamed the action id `audio_mic_pregate` to `audio_mic_pregain`, renamed "Transition MIX / DIP" to "Transition MIX / DIP / FREEZE", and made the LOGO Select labels 1-based.
+- **N3**: PGM/PVW and WIPE feedback dropdowns are built from the protocol capabilities (input and wipe counts); action descriptions no longer show protocol hex codes or fixed ranges.
+- **H1**: all code comments, action and feedback text, log messages, the CHANGELOG and HELP.md are now in English.
 
 ### Notes
 
-- **N2**（预设分组零宽字符排序）：**有意保留**。移除后预设分组顺序将依赖 Companion 渲染实现，存在分组错乱回归风险，故本次不调整。
-- 所有网络与生命周期层改动均未触碰 `avm-0617`（SHARK S6 PLUS / S5 / H5）与 `avm-0605`（SHARK S6）的协议命令表、键值表与状态解析布局，旧族行为保持不变。
+- Outside the H4K family, behaviour is kept equivalent for `avm-0617` (SHARK S6 PLUS / S5 / H5) and `avm-0605` (SHARK S6).
+- v1.0.0 N2 (zero-width characters ordering the preset categories) is intentionally kept.
 
-### 复审对照表
+## [1.0.1] - 2026-11-02
 
-| 编号 | 修复内容                        | 关键改动                                                         |
-| ---- | ------------------------------- | ---------------------------------------------------------------- |
-| C1   | `.yarnrc.yml` 供应链加固        | `enableScripts` / `npmMinimalAgeGate` / `npmPreapprovedPackages` |
-| H1   | 发送失败不再崩进程              | `await udp.send()` 纳入 `try/catch`                              |
-| H2   | 手动 IP 可正常连接              | 心跳无目标设备时仍发探测包并计 miss                              |
-| H3   | 启动扫描不再抢连接/覆盖手填 IP  | 仅首次配置自动选设备                                             |
-| M1   | 扫描 socket 泄漏                | `scanSockets` 统一回收                                           |
-| M2   | 改回 Target IP 仍发旧地址       | 用 `connectedHost` 判定重连                                      |
-| M3   | 断网仍显示绿色                  | 发送失败也计 miss                                                |
-| M4   | 空扫描清空设备列表              | 仅非空才覆盖列表                                                 |
-| M5   | 无设备无 IP 卡在 Connecting     | 置 `BadConfig` 提示                                              |
-| M6   | 预设随在线状态消失              | 不再 `setPresetDefinitions({})`                                  |
-| L1   | 闪烁定时器未清理                | `destroy()` 清 `flashTimer`                                      |
-| L2   | 重连后停止闪烁                  | 复位 `blinkOn` + `updateBlink()`                                 |
-| L3   | 本地按下常亮不闪                | 翻转后调 `updateBlink()`                                         |
-| L4   | AUTO 常亮/状态反转              | 瞬时高亮后自动释放                                               |
-| L5   | 未发送却改 T-Bar 变量           | 成功后才写变量，失败回滚                                         |
-| L6   | Flash 反馈示例 key 错误         | 改为真实 key 格式                                                |
-| L7   | 反馈以内部 ID 展示              | 可读名称 + `description`                                         |
-| L8   | 显示字面量 `$(self:tbar_value)` | 改为说明文字                                                     |
-| L9   | 配置 tooltip 为中文             | 英文化                                                           |
-| L10  | 首发声明的 legacyId             | 移除 `szavm`                                                     |
-| L11  | 报文/心跳 info 级刷屏、重复处理 | 降为 `debug`，`warn` 直通                                        |
-| N1   | 松散类型                        | `ParsedPacket` / `DeviceState`                                   |
-| N2   | 零宽字符排序                    | 有意保留（避免分组乱序）                                         |
-| NR1  | base v2.x 迁移                  | 下个版本规划                                                     |
+Fixes for the issues raised in the `companion-module-avmatrix-switcher v1.0.0` review (`review-avmatrix-switcher-v1.0.0-20261030-090507`).
+
+### Security
+
+- **C1**: added the template's supply-chain hardening to `.yarnrc.yml`: `enableScripts: false`, `npmMinimalAgeGate: 3d` and `npmPreapprovedPackages: ["@companion-module/*"]`, preventing install scripts and blocking versions published less than 3 days ago.
+
+### Fixed
+
+- **H1**: `sendCommand()` / `sendCommandWithCallback()` now `await this.udp.send(...)`; a failed send (link down / unreachable route) no longer becomes an unhandled rejection that crashes Node 22, but is caught and returns `false`.
+- **H2**: with a manually typed Target IP (other subnet, not discovered), the heartbeat no longer skips sending; it keeps probing with the family `probeCommand` or the `0xFFFF` discovery packet and switches to Connection Failure after consecutive misses.
+- **H3**: the start-up scan only auto-selects a device on first setup (Device and Target IP both empty); otherwise it only refreshes the device list and keeps the selected device / manually typed Target IP.
+- **M1**: the UDP sockets created per network interface during a scan are tracked in `scanSockets` and closed on `disconnect()` and on timeout, fixing the post-destroy send/listen and the failed-scan leak.
+- **M2**: added `connectedHost`; `configUpdated()` now compares against the actually connected host, fixing "changing Target IP back to the Device value still sends to the old address".
+- **M3**: a failed heartbeat send also counts as a miss, so the status turns to Connection Failure when the Companion host loses the network instead of staying green.
+- **M4**: an empty scan result no longer clears `discoveredDevices`, keeping the previous device list and MAC/model info.
+- **M5**: with no device and no Target IP, the status becomes `BadConfig` (asking for a Target IP) instead of staying in Connecting forever.
+- **M6**: presets stay registered after `init()` / `applyDeviceProfile()` and are no longer cleared with `setPresetDefinitions({})` on connection changes.
+- **L1**: `destroy()` clears the 400 ms action-flash timer `flashTimer`.
+- **L2**: reset the `blinkOn` phase on disconnect/reconnect and call `updateBlink()` when back online, fixing FTB/MUTE/Freeze no longer blinking after a reconnect.
+- **L3**: call `updateBlink()` after locally toggling FTB/MUTE/Freeze, fixing "steady light, no blink".
+- **L4**: AUTO is treated as a momentary action: it lights briefly and is released automatically, fixing the always-on and inverted state.
+- **L5**: `moveTBar()` refuses to run while disconnected; a failed send rolls back the local base and does not update the display variables; `tbar_value` is written only after a successful send.
+- **L6**: corrected the example key of the "Last Action (Flash)" feedback to the real format (`set_source|source=5`, and `key:NN` for reports).
+- **L7**: PIP/LUMA/CHROMA/DSK/LOGO status feedbacks use readable names and have a `description`; `connection_status` is renamed to "Device Disconnected" and documents its meaning.
+- **L8**: removed the ineffective `$(self:tbar_value)` static text from the T-Bar Move action and replaced it with an explanation.
+- **L9**: translated the config tooltips (Device / Target IP) to English.
+- **L10**: removed the unpublished `legacyIds: ["szavm"]` from `companion/manifest.json`.
+- **L11**: lowered traffic logs such as `[Recv]`, `[Send]`, `[Heartbeat]` and `[Report]` to `debug`; `warn` is no longer downgraded to `info`, greatly reducing run-time log noise.
+
+### Changed
+
+- **N1**: tightened types: `handleDeviceReport(packet: ParsedPacket)`, `getDeviceState(): DeviceState` (new `DeviceState` interface), improving type safety of the report path.
+
+### Notes
+
+- **N2** (zero-width characters ordering preset categories): **intentionally kept**. Removing it would make the preset group order depend on Companion's rendering and risk a regression, so it is left unchanged.
+- No network or lifecycle change touched the protocol command tables, key maps or state layouts of `avm-0617` (SHARK S6 PLUS / S5 / H5) or `avm-0605` (SHARK S6); the old families behave exactly as before.
+
+### Review follow-up
+
+| ID  | Fix                                                                            | Key change                                                          |
+| --- | ------------------------------------------------------------------------------ | ------------------------------------------------------------------- |
+| C1  | `.yarnrc.yml` supply-chain hardening                                           | `enableScripts` / `npmMinimalAgeGate` / `npmPreapprovedPackages`    |
+| H1  | a failed send no longer crashes the process                                    | `await udp.send()` inside `try/catch`                               |
+| H2  | a manual IP can connect                                                        | probe is still sent (and counted as a miss) without a target device |
+| H3  | the start-up scan no longer takes over the connection / overwrites a manual IP | only first setup auto-selects a device                              |
+| M1  | scan socket leak                                                               | `scanSockets` closed together                                       |
+| M2  | Target IP change still sent to the old address                                 | reconnect decided by `connectedHost`                                |
+| M3  | status stayed green without a network                                          | a failed send also counts as a miss                                 |
+| M4  | an empty scan cleared the device list                                          | only overwrite when non-empty                                       |
+| M5  | no device and no IP stayed in Connecting                                       | `BadConfig` status is reported                                      |
+| M6  | presets vanished with the online state                                         | no more `setPresetDefinitions({})`                                  |
+| L1  | flash timer was not released                                                   | `destroy()` clears `flashTimer`                                     |
+| L2  | blinking stopped after a reconnect                                             | reset `blinkOn` + `updateBlink()`                                   |
+| L3  | local press stayed solid                                                       | `updateBlink()` after the flip                                      |
+| L4  | AUTO stayed on / state inverted                                                | momentary highlight, released automatically                         |
+| L5  | T-Bar variable changed before sending                                          | variable written only on success, rolled back on failure            |
+| L6  | wrong example key in the flash feedback                                        | real key format                                                     |
+| L7  | feedbacks shown by internal id                                                 | readable names + `description`                                      |
+| L8  | literal `$(self:tbar_value)` shown                                             | replaced with an explanation                                        |
+| L9  | config tooltips were in Chinese                                                | translated to English                                               |
+| L10 | legacyId declared on first release                                             | `szavm` removed                                                     |
+| L11 | packet/heartbeat info noise and duplicate handling                             | lowered to `debug`, `warn` passes through                           |
+| N1  | loose typing                                                                   | `ParsedPacket` / `DeviceState`                                      |
+| N2  | zero-width ordering                                                            | intentionally kept (avoids category reordering)                     |
+| NR1 | base v2.x migration                                                            | planned for a later release                                         |
 
 ## [1.0.0] - 2026-10-30
 
 ### Added
 
-- 首个正式发布版本。
-- 基于 UDP（端口 7000）控制 Avmatrix 切换台。
-- 支持 SHARK S6（VS0605）、SHARK S6 PLUS（VS0617），并兼容使用相同 UDP 协议的其它型号。
-- UDP 广播自动发现设备，支持手动填写 Target IP（跨网段）。
-- 提供 PGM / PVW 源、CUT / AUTO / FTB / MUTE、PIP / LUMA / CHROMA / DSK / LOGO、转场（WIPE）、T-Bar 等动作、反馈与预设。
-- 状态跟随设备上报同步，硬件面板操作也会更新按键反馈。
+- First release.
+- Control Avmatrix switchers over UDP (port 7000).
+- Support for SHARK S6 (VS0605) and SHARK S6 PLUS (VS0617), plus other models using the same UDP protocol.
+- Automatic device discovery via UDP broadcast, with a manually typed Target IP for other subnets.
+- Actions, feedbacks and presets for PGM / PVW sources, CUT / AUTO / FTB / MUTE, PIP / LUMA / CHROMA / DSK / LOGO, transitions (WIPE) and T-Bar.
+- State follows the device reports, so button feedback also updates when the hardware panel is used.
 
 ### Notes
 
-- 本版本经 Bitfocus 审核，结论为 “Changes Required”，相关问题的修复见 [1.0.1]。
+- This release was reviewed by Bitfocus with the verdict "Changes Required"; the fixes are in [1.0.1].

@@ -1,3 +1,4 @@
+import { AsyncLocalStorage } from 'node:async_hooks'
 import { InstanceBase, runEntrypoint, InstanceStatus, SomeCompanionConfigField } from '@companion-module/base'
 import {
 	DEVICE_PORT,
@@ -21,7 +22,7 @@ import {
 } from './communication.js'
 import { parseDeviceResponse, handleDeviceResponse, buildCommand, type TBarSendMode } from './commandHandler.js'
 import { buildSetData, type ProtocolCommand } from './features.js'
-import { buildProtocolCommands, getActiveProfile, matchDeviceProfile } from './devices/index.js'
+import { buildProtocolCommands, getActiveProfile, getProfileById, matchDeviceProfile } from './devices/index.js'
 import { getProtocolFamily } from './devices/protocols.js'
 import type { DeviceProfile, ProtocolFamily } from './devices/types.js'
 import { LOG_RAW_PACKETS } from './debug.js'
@@ -44,81 +45,91 @@ export interface DeviceState {
 
 export class ModuleInstance extends InstanceBase<ModuleConfig> {
 	config!: ModuleConfig
-	// 当前设备所属产品档案：决定可用功能分组与协议命令表
+	// Product profile of the current device: decides the available feature groups and command table
 	private deviceProfile: DeviceProfile = getActiveProfile(undefined)
 	private protocolCommands: Record<string, ProtocolCommand> = buildProtocolCommands(this.deviceProfile)
 	private protocolFamily: ProtocolFamily = getProtocolFamily(this.deviceProfile.protocolFamily)
-	// 当前已注册的 action id 集合（供 presets 剔除引用到不存在 action 的按钮）
+	// Ids of the actions currently registered (presets drop buttons referencing missing actions)
 	private registeredActionIds: Set<string> = new Set()
 	private comm: CommunicationManager | undefined
-	// 最近一次 UDP 广播扫描发现的设备，用于填充 Device 下拉框
+	// Devices found by the last UDP broadcast scan, used to fill the Device dropdown
 	private discoveredDevices: DeviceInfo[] = []
-	// 扫描互斥标记，避免重复扫描叠加
+	// Scan mutex, so overlapping scans are not started
 	private scanInProgress = false
-	// 实例是否存活，用于丢弃 destroy 之后完成的扫描结果
+	// L1: the scanner of the scan in progress, so destroy() can abort it
+	private scanner: CommunicationManager | undefined
+	// Whether the instance is alive, so scan results completing after destroy() are discarded
 	private instanceAlive = false
-	// 当前正在使用的连接 host（用于 configUpdated 判断是否需要重连）
+	// Host of the current connection (configUpdated uses it to decide whether a reconnect is needed)
 	private connectedHost: string | undefined
 	private deviceState: DeviceState = {
 		pgmSource: 0, // 1-4=HDMI1-4, 0xF0-0xF1=Pattern1-2
 		pvwSource: 0,
 		mvState: 0,
-		// T-Bar 当前值（0~500 显示刻度，内部 0~4095）
+		// Current T-Bar value (0~500 display scale, 0~4095 internally)
 		tbarValue: 0,
-		// WIPE 模式（1~6，来自 0x0110 上报）
+		// Wipe mode (1~6, from the 0x0110 report)
 		wipeMode: 0,
-		// SPEED 模式（1~2，来自 0x0110 上报）
+		// Speed mode (1~2, from the 0x0110 report)
 		speedMode: 0,
-		// Freeze 状态（0/1，来自 0x0110 上报）
+		// Freeze state (0/1, from the 0x0110 report)
 		freezeActive: false,
-		// 最近一次成功执行的 action key（用于执行闪烁反馈）
+		// Key of the last successfully executed action (drives the action-flash feedback)
 		lastAction: '',
-		// FTB/MUTE 定时闪烁相位
+		// FTB/MUTE blink phase
 		blinkOn: true,
-		// AUTO/FTB/MUTE 激活态（按键执行后本地翻转，用于反馈）
+		// AUTO/FTB/MUTE active state (flipped locally after a key press, used by feedbacks)
 		muteActive: false,
 		ftbActive: false,
 		autoActive: false,
-		// 当前激活的 Key 模块（0x0130：0=PIP / 1=Luma / 2=Chroma / 3=DSK；-1=未知，仅 H4K）
+		// Currently active key module (0x0130: 0=PIP / 1=Luma / 2=Chroma / 3=DSK; -1=unknown, H4K only)
 		keyType: -1,
 	}
-	// 执行闪烁定时器
+	// Action flash timer
 	private flashTimer: ReturnType<typeof setTimeout> | undefined
-	// FTB/MUTE 定时闪烁
+	// L2: one-shot timers started by button presses, cancelled on destroy()
+	private pendingTimers = new Set<ReturnType<typeof setTimeout>>()
+	// FTB/MUTE blink timer
 	private blinkTimer: ReturnType<typeof setInterval> | undefined
-	// 各“获取指令”(0x0120~0x01B0) 上报/回包解析后的字段值（按 features.ts 字段顺序）
+	// Parsed field values of every "get command" (0x0120~0x01B0) report/reply (in features.ts field order)
 	private reportState: Record<string, number[]> = {}
-	// T-Bar 原始值（0~tBarMax，H4K 为 0~4095）；下发与显示都以它为基准
+	// Raw T-Bar value (0~tBarMax, 0~4095 on H4K); used as the base for sending and display
 	private tbarRaw = 0
-	// 推杆下发序号：连续点击时只让最后一次做回读校验，避免日志刷屏与重复重发
+	// T-Bar send sequence: only the last one is verified on rapid clicks, avoiding log spam and resends
 	private tbarSendSeq = 0
-	// 设备上报的 T-Bar 原始值（仅由 0x0110 解析回写，不受本地乐观更新影响；-1=尚未收到上报）
+	// T-Bar value reported by the device (written only from a parsed 0x0110; -1 = not received yet)
 	private lastReportedTBar = -1
-	// 推杆本地基准锁定到期时间：H4K 连续点击期间不让设备回读覆盖 tbarRaw（否则每次 ±step 基准会漂移）
+	// Local T-Bar base lock expiry: while clicking on H4K, read-backs must not override tbarRaw (otherwise the base drifts)
 	private tbarHoldUntil = 0
-	// 各“获取指令”最近一次收到回包/上报的时间（用于查询重试判定）
+	// Time of the last reply/report per get command (used by the query retry check)
 	private lastReplyAt: Map<string, number> = new Map()
-	// WIPE 样式写后校验（仅 H4K）：记录刚下发的 WipeN、目标值以及下发前的三个 Wipe 值
+	// Wipe style write check (H4K only): records the WipeN just sent, the target value and the three Wipe values before
 	private pendingWipeCheck?: { n: number; value: number; before: number[]; at: number }
-	// 当前正在执行的动作的唯一 key（供“仅被点击按钮”闪烁反馈）
-	pendingFlashKey: string | undefined
+	// L7: per-action flash key, isolated per async context so concurrent actions cannot affect each other
+	private flashKeyContext = new AsyncLocalStorage<string>()
 
 	constructor(internal: unknown) {
 		super(internal)
 	}
 
-	async init(config: ModuleConfig, _isFirstInit: boolean): Promise<void> {
+	async init(config: ModuleConfig, isFirstInit: boolean): Promise<void> {
 		this.config = config
 		this.instanceAlive = true
 
 		this.log('info', 'Instance initialized')
 
-		// 先用上次持久化的设备列表填充下拉框，保证配置面板立刻可见
+		// Fill the dropdown with the persisted device list first, so the config panel is usable immediately
 		this.discoveredDevices = this.savedDevicesToInfo(config.devices)
 
-		// 依据已保存的型号确定产品档案（协议族 + 功能集），再注册功能表
-		const initialDevice = this.discoveredDevices.find((d) => d.host === config.host) ?? this.discoveredDevices[0]
-		this.deviceProfile = getActiveProfile(initialDevice?.model, initialDevice?.productType)
+		// Manual Device Model (when enabled) always wins; otherwise the scanned model / fallback is used.
+		const initialDevice = this.discoveredDevices.find((d) => d.host === config.host)
+		const fallbackDevice = initialDevice ?? this.discoveredDevices[0]
+		const manualProfileId = config.manualModel ? config.deviceModel : undefined
+		if (config.manualModel && !manualProfileId) {
+			this.log('warn', '[Config] Manual Device Model is on but no model selected, using auto-detect')
+		}
+		this.deviceProfile =
+			getProfileById(manualProfileId) ?? getActiveProfile(fallbackDevice?.model, fallbackDevice?.productType)
 		this.protocolCommands = buildProtocolCommands(this.deviceProfile)
 		this.protocolFamily = getProtocolFamily(this.deviceProfile.protocolFamily)
 		this.log(
@@ -131,7 +142,7 @@ export class ModuleInstance extends InstanceBase<ModuleConfig> {
 		this.updatePresets()
 		this.updateVariableDefinitions()
 
-		// 已有地址则立即连接（不阻塞等待扫描，见下方说明）
+		// Connect immediately when an address exists (do not block on the scan, see below)
 		if (this.config.host) {
 			this.updateStatus(InstanceStatus.Connecting, 'Connecting to device...')
 			this.setupConnection()
@@ -139,45 +150,85 @@ export class ModuleInstance extends InstanceBase<ModuleConfig> {
 			this.updateStatus(InstanceStatus.Connecting, 'Scanning for supported devices...')
 		}
 
-		// 打开连接开关时扫描一次设备列表（仅一次，用于发现/刷新设备）。
-		// 注意：不能 await —— 扫描约需数秒，阻塞 init 会超过 Companion 的 IPC
-		// 超时上限，导致模块被判定为初始化失败并反复重启。
-		void this.scanDevicesOnce()
+		// Scan only on first initialisation, or when there is no persisted device list yet.
+		// A dev-mode reload or a config save runs init again with isFirstInit=false; scanning
+		// every time made the module look like it kept re-discovering devices.
+		// Note: it must NOT be awaited - a scan takes seconds and blocking init would exceed
+		// Companion's IPC timeout, making the module look like it failed to initialise and restart.
+		if (isFirstInit || this.discoveredDevices.length === 0) void this.scanDevicesOnce()
 	}
 
 	async destroy(): Promise<void> {
 		this.instanceAlive = false
+		// L1: abort a running scan first, otherwise its sockets keep broadcasting
+		// after the connection has been destroyed.
+		if (this.scanner) {
+			this.scanner.disconnect()
+			this.scanner = undefined
+		}
 		this.destroyConnection()
-		// L1：确保“执行闪烁”定时器在实例销毁时一并释放，避免 destroy 后仍然 fire
+		// Make sure the action-flash timer is released on destroy, so it cannot fire afterwards
 		if (this.flashTimer) {
 			clearTimeout(this.flashTimer)
 			this.flashTimer = undefined
 		}
+		// L2: cancel every short follow-up timer started by a button press
+		for (const t of this.pendingTimers) clearTimeout(t)
+		this.pendingTimers.clear()
 		this.log('debug', 'destroy')
 	}
 
+	/** Register a one-shot timer so destroy() can cancel it (L2). */
+	public schedule(fn: () => void, ms: number): void {
+		const t = setTimeout(() => {
+			this.pendingTimers.delete(t)
+			fn()
+		}, ms)
+		this.pendingTimers.add(t)
+	}
+
 	/**
-	 * 保存配置时触发（点 Save）。
-	 * Device 下拉变化 -> 同步 Target IP 并自动连接到该设备（随后由心跳监测在线状态）。
+	 * Run an action with its own flash key (L7).
+	 * AsyncLocalStorage keeps the key in the action's async context, so two actions running at
+	 * the same time never overwrite each other's key (the previous shared field could flash the
+	 * wrong button or clear another action's key).
+	 */
+	public runWithFlashKey<R>(key: string, fn: () => R): R {
+		return this.flashKeyContext.run(key, fn)
+	}
+
+	/**
+	 * Called when the config is saved (Save button).
+	 * A Device dropdown change syncs the Target IP and connects to that device (online state is tracked by the heartbeat).
 	 */
 	async configUpdated(config: ModuleConfig): Promise<void> {
 		const previousDevice = this.config?.device
+		const previousModel = this.config?.deviceModel ?? ''
+		const previousManual = this.config?.manualModel ?? false
 		const deviceChanged = !!config.device && config.device !== previousDevice
+		// Turning the manual switch on/off also changes which protocol is used
+		const modelChanged =
+			(config.deviceModel ?? '') !== previousModel || (config.manualModel ?? false) !== previousManual
 
 		this.config = config
 
-		// Device 切换：Target IP 必须跟着所选设备走，保证界面显示值同步
+		// Device changed: the Target IP must follow the selected device so the UI stays in sync
 		if (deviceChanged) {
 			this.log('info', `[Config] Device switched to ${config.device}, syncing Target IP and reconnecting`)
 			this.config = { ...config, host: config.device }
 			this.saveConfig(this.config)
+		} else if (modelChanged) {
+			this.log(
+				'info',
+				`[Config] Device model ${config.manualModel ? `manual (${config.deviceModel || 'auto-detect'})` : 'automatic'}, reconnecting`,
+			)
 		} else {
 			this.log('info', `[Config] Reconnecting to ${config.host}`)
 		}
 
-		// M2：以实际建立的连接 host 为准，而不是旧的 config.device。
-		// 避免“将 Target IP 改回与 Device 同值时因 device 未变而不重连”。
-		if (!deviceChanged && this.comm && this.config.host === this.connectedHost) {
+		// M2: compare against the actually connected host instead of the old config.device.
+		// This avoids "changing Target IP back to the Device value does not reconnect because device is unchanged".
+		if (!deviceChanged && !modelChanged && this.comm && this.config.host === this.connectedHost) {
 			this.log('debug', '[Config] Same connected host, keeping existing connection')
 			return
 		}
@@ -185,17 +236,17 @@ export class ModuleInstance extends InstanceBase<ModuleConfig> {
 		this.reconnect()
 	}
 
-	/** 销毁旧连接并按当前 config 重新连接（含心跳） */
+	/** Destroy the old connection and reconnect using the current config (including the heartbeat) */
 	private reconnect(): void {
 		this.destroyConnection()
 		this.updateStatus(InstanceStatus.Connecting, 'Connecting to device...')
 		this.setupConnection()
 	}
 
-	/** 把持久化的设备列表还原成运行时结构（含 MAC，保证重启后可直接发心跳） */
+	/** Restore the persisted device list into runtime structures (with MAC, so heartbeats work right after a restart) */
 	private savedDevicesToInfo(saved: SavedDevice[] | undefined): DeviceInfo[] {
 		return (saved ?? []).map((d) => {
-			// 优先用原始型号按映射表重算 Dev_Type，保证修改映射后自动生效
+			// Recompute Dev_Type from the raw model first, so mapping changes take effect automatically
 			const rawModel = d.rawModel ?? d.name
 			const modelIndex = getUdpModelIndex(rawModel, d.productType)
 			return {
@@ -215,9 +266,9 @@ export class ModuleInstance extends InstanceBase<ModuleConfig> {
 	}
 
 	/**
-	 * 打开连接开关时扫描一次设备列表：
-	 * - 结果写入 discoveredDevices 并持久化到 config，重启后仍可显示
-	 * - 未指定设备时默认选中第一个，并让 Target IP 与之一致
+	 * Scan the device list on first init, or when no persisted device list exists:
+	 * - results go into discoveredDevices and are persisted to config, so they survive a restart
+	 * - when no device is selected, the first one is selected and the Target IP follows it
 	 */
 	private async scanDevicesOnce(): Promise<void> {
 		if (this.scanInProgress) {
@@ -235,7 +286,7 @@ export class ModuleInstance extends InstanceBase<ModuleConfig> {
 
 			if (devices.length === 0) {
 				this.log('warn', '[Scan] No supported device found, keeping previous device list')
-				// M5：无扫描结果且无手动 Target IP 时，明确提示用户而不是永远 Connecting
+				// M5: with no scan result and no manual Target IP, tell the user instead of staying in Connecting forever
 				if (!this.config.host) {
 					this.updateStatus(InstanceStatus.BadConfig, 'No supported device found – enter a Target IP')
 				}
@@ -251,8 +302,8 @@ export class ModuleInstance extends InstanceBase<ModuleConfig> {
 				rawModel: d.model,
 			}))
 
-			// H3：只在首次配置（Device 与 Target IP 均为空）时自动选一个设备；
-			// 否则仅刷新设备列表，保留用户已选的 Device / 手填的 Target IP。
+			// H3: only auto-select a device on first setup (both Device and Target IP empty);
+			// otherwise just refresh the list and keep the selected Device / manual Target IP.
 			const firstSetup = !this.config.device && !this.config.host
 			if (!firstSetup) {
 				const stillOnline = saved.find((d) => d.host === this.config.device)
@@ -262,19 +313,21 @@ export class ModuleInstance extends InstanceBase<ModuleConfig> {
 				if (devicesChanged) this.saveConfig(this.config)
 
 				if (stillOnline) {
-					// 目标仍在线：刷新 profile（型号可能扫描后才能确认）并将新 MAC 信息交给心跳
-					this.applyDeviceProfile(stillOnline.rawModel, stillOnline.productType)
+					// Target still online: refresh the profile (the model may only be known after a scan) and give the new MAC to the heartbeat.
+					// A manual Device Model still wins over the scanned model.
+					const manualProfileId = this.config.manualModel ? this.config.deviceModel : undefined
+					this.applyDeviceProfile(stillOnline.rawModel, stillOnline.productType, manualProfileId)
 					if (this.comm) {
 						this.comm.setTargetDevice(this.discoveredDevices.find((d) => d.host === stillOnline.host))
 						if (this.comm.getStatus()) this.comm.startHeartbeat()
 					}
 				}
-				// 目标离线：不自动抢接管——可能是用户手填的 Target IP 或临时重启的设备，
-				// 交给心跳自己处理（设备回来时会自然恢复在线）。
+				// Target offline: do not take over - it may be a manually typed IP or a device that is rebooting.
+				// The heartbeat handles it and the device comes back online when it returns.
 				return
 			}
 
-			// 首次配置：默认选中扫描到的第一个设备，将 Device 与 Target IP 统一写入配置
+			// First setup: select the first discovered device and write Device and Target IP into the config
 			const target = saved[0]
 			const nextConfig: ModuleConfig = {
 				...this.config,
@@ -285,15 +338,17 @@ export class ModuleInstance extends InstanceBase<ModuleConfig> {
 			this.config = nextConfig
 			this.saveConfig(this.config)
 
-			// 型号/设备类型变化时切换产品档案（协议族或功能集可能不同）
-			this.applyDeviceProfile(target.rawModel, target.productType)
+			// Switch the product profile when the model/device type changes (protocol family or feature set may differ).
+			// A manual Device Model still wins over the scanned model.
+			const manualProfileId = this.config.manualModel ? this.config.deviceModel : undefined
+			this.applyDeviceProfile(target.rawModel, target.productType, manualProfileId)
 
 			this.log(
 				'info',
 				`[Scan] First-time setup: Device="${target.name}" TargetIP=${target.host} (${saved.length} device(s) available)`,
 			)
 
-			// 首次识别到设备：自动连接到该设备
+			// First identification of a device: connect to it automatically
 			this.reconnect()
 		} catch (error) {
 			this.log('error', `[Scan] Unexpected scan failure: ${(error as Error).message}`)
@@ -303,39 +358,47 @@ export class ModuleInstance extends InstanceBase<ModuleConfig> {
 	}
 
 	getConfigFields(): SomeCompanionConfigField[] {
-		// Device 下拉由 UDP 扫描结果填充，Target IP 可手动编辑
-		return GetConfigFields(this.buildDeviceChoices(), this.config)
+		// The Device dropdown is filled from the UDP scan; the Target IP can be edited manually.
+		// The AUTO SCAN entry shows the model detected for the current Target IP (if any).
+		const currentHost = this.config?.host
+		const detected = currentHost ? this.discoveredDevices.find((d) => d.host === currentHost) : undefined
+		const detectedProfile = detected ? getActiveProfile(detected.model, detected.productType) : undefined
+		return GetConfigFields(
+			this.buildDeviceChoices(),
+			detectedProfile ? { id: detectedProfile.id, name: detectedProfile.displayName } : undefined,
+			this.config,
+		)
 	}
 
-	/** 当前生效的产品档案（供 actions / feedbacks / presets 按功能分组裁剪） */
+	/** Currently active product profile (actions / feedbacks / presets are filtered by its feature groups) */
 	public getDeviceProfile(): DeviceProfile {
 		return this.deviceProfile
 	}
 
-	/** 当前产品可用的协议命令表（协议族命令表 + 产品覆盖） */
+	/** Protocol command table available for this product (family table + product overrides) */
 	public getProtocolCommands(): Record<string, ProtocolCommand> {
 		return this.protocolCommands
 	}
 
-	/** 当前产品所属协议族（输入路数 / PIP 数量 / WIPE 数量 / 键值表等能力） */
+	/** Protocol family of the current product (input count / PIP count / wipe count / key map, etc.) */
 	public getProtocolFamilyInfo(): ProtocolFamily {
 		return this.protocolFamily
 	}
 
-	/** 记录本次注册的 action id（由 actions.ts 在注册完成后调用） */
+	/** Record the action ids registered this time (called by actions.ts after registration) */
 	public setRegisteredActionIds(ids: string[]): void {
 		this.registeredActionIds = new Set(ids)
 	}
 
-	/** 当前已注册的 action id 集合 */
+	/** Ids of the currently registered actions */
 	public getRegisteredActionIds(): Set<string> {
 		return this.registeredActionIds
 	}
 
 	/**
-	 * 主动获取一轮设备状态（仅对声明了 stateQueryKeys / queryAllOnConnect 的协议族生效，如 H4K）。
-	 * 参考上位机 SharkH4kProModel：查询走【独立的 0x01xx 指令码】，payload 为空（不带 Param_Vaild），
-	 * 设备用同一 CMD + Pack_Type=1 回全量；参数变化时设备也会用同一 CMD + Pack_Type=2 主动上报。
+	 * Query one round of device state (only for families declaring stateQueryKeys / queryAllOnConnect, e.g. H4K).
+	 * Reference host app SharkH4kProModel: queries use the dedicated 0x01xx command codes with an empty payload
+	 * (no Param_Vaild); the device answers with the same CMD + Pack_Type=1, and also sends Pack_Type=2 reports on changes.
 	 */
 	public async queryDeviceState(): Promise<void> {
 		if (!this.comm) return
@@ -343,9 +406,9 @@ export class ModuleInstance extends InstanceBase<ModuleConfig> {
 		const family = this.protocolFamily
 		let keys: string[]
 		if (family.queryAllOnConnect) {
-			// 所有带获取码的指令都查一遍（H4K：state/transition/luma/chroma/pip1/dsk/logo/audio）
+			// Query every command that has a get code (H4K: state/transition/luma/chroma/pip1/dsk/logo/audio)
 			keys = Object.keys(this.protocolCommands).filter((k) => this.protocolCommands[k].get !== undefined)
-			// state（0x0110，PGM/PVW/T-Bar）优先
+			// state (0x0110, PGM/PVW/T-Bar) first
 			keys.sort((a, b) => (a === 'state' ? -1 : b === 'state' ? 1 : 0))
 		} else {
 			keys = family.stateQueryKeys ?? []
@@ -353,18 +416,21 @@ export class ModuleInstance extends InstanceBase<ModuleConfig> {
 		if (keys.length === 0) return
 
 		this.log('info', `[Query] Requesting device state: ${keys.join(', ')}`)
-		// 第一轮：上位机做法 —— 0x01xx 指令码 + 空 payload
+		// First round: the host app approach - 0x01xx command code with an empty payload
 		await this.sendQueryRound(keys, 'get')
 		await new Promise((resolve) => setTimeout(resolve, 700))
+		// L2: stop the retry loop once the instance has been destroyed
+		if (!this.instanceAlive) return
 
-		// 没回包的指令用控制码 + Param_Vaild(全 0) 再查一次（仅 H4K 开启：部分 H4K 固件只认控制码）
-		// 0617 / 0605 不做重试，保持原有单轮查询行为
+		// Commands without a reply are queried again with the control code + Param_Vaild(all 0)
+		// (H4K only: some H4K firmware only accepts the control code). 0617 / 0605 keep the single-round behaviour.
 		if (!family.queryAllOnConnect) return
 		const missing = keys.filter((key) => !this.hasRecentReply(key))
 		if (missing.length > 0) {
 			this.log('info', `[Query] No reply for ${missing.join(', ')}, retrying with control code + Param_Vaild=0`)
 			await this.sendQueryRound(missing, 'set')
 			await new Promise((resolve) => setTimeout(resolve, 700))
+			if (!this.instanceAlive) return
 			const stillMissing = missing.filter((key) => !this.hasRecentReply(key))
 			if (stillMissing.length > 0) {
 				this.log('warn', `[Query] Still no reply: ${stillMissing.join(', ')}`)
@@ -372,9 +438,10 @@ export class ModuleInstance extends InstanceBase<ModuleConfig> {
 		}
 	}
 
-	/** 发送一轮查询：get = 0x01xx + 空 Data；set = 控制码 + Param_Vaild(全 0) */
+	/** Send one query round: get = 0x01xx + empty Data; set = control code + Param_Vaild(all 0) */
 	private async sendQueryRound(keys: string[], mode: 'get' | 'set'): Promise<void> {
 		for (const key of keys) {
+			if (!this.instanceAlive) return
 			const cmd = this.protocolCommands[key]
 			if (!cmd || !this.comm) continue
 			if (mode === 'get') {
@@ -382,23 +449,23 @@ export class ModuleInstance extends InstanceBase<ModuleConfig> {
 			} else {
 				await this.comm.sendCommand(cmd.set, Buffer.alloc(4))
 			}
-			// 间隔发送，避免 UDP 拥塞或设备处理不过来
+			// Space the sends out, to avoid UDP congestion or overwhelming the device
 			await new Promise((resolve) => setTimeout(resolve, 150))
 		}
 	}
 
-	/** 最近 3 秒内是否收到过该指令的回包/上报 */
+	/** Whether a reply/report for this command arrived within the last 3 seconds */
 	private hasRecentReply(key: string): boolean {
 		const at = this.lastReplyAt.get(key)
 		return at !== undefined && Date.now() - at < 3000
 	}
 
-	/** 协议命令中是否存在某字段（供 actions 按产品能力裁剪选项） */
+	/** Whether a protocol command has a given field (actions use it to trim options by product capability) */
 	public hasField(commandKey: string, fieldName: string): boolean {
 		return this.protocolCommands[commandKey]?.fields.some((f) => f.name === fieldName) ?? false
 	}
 
-	/** 按「字段名」下发协议设置指令；字段不存在时自动跳过，保证多协议共用同一套 action */
+	/** Send a protocol set command by field name; missing fields are skipped so all protocols share one action set */
 	public async sendProtocolField(
 		commandKey: string,
 		fieldName: string,
@@ -419,11 +486,12 @@ export class ModuleInstance extends InstanceBase<ModuleConfig> {
 	}
 
 	/**
-	 * 依据设备原始型号切换产品档案。
-	 * 档案变化时重新注册 action / feedback / preset，使不同产品的功能相互隔离。
+	 * Switch the product profile based on the raw device model.
+	 * When the profile changes, actions / feedbacks / presets are re-registered so products stay isolated.
 	 */
-	public applyDeviceProfile(rawModel: string | undefined, deviceType?: number): void {
-		const next = getActiveProfile(rawModel, deviceType)
+	public applyDeviceProfile(rawModel: string | undefined, deviceType?: number, profileId?: string): void {
+		// An explicit profile id (manual Device Model) wins; otherwise match the scanned model / device type
+		const next = getProfileById(profileId) ?? getActiveProfile(rawModel, deviceType)
 		if (next.id === this.deviceProfile.id) return
 
 		this.deviceProfile = next
@@ -440,19 +508,18 @@ export class ModuleInstance extends InstanceBase<ModuleConfig> {
 		this.updateVariableDefinitions()
 	}
 
-	/** 把扫描结果转成 Device 下拉的选项：只显示已建档型号，值为设备 IP */
+	/** Map scan results to Device dropdown choices; only known models are listed. */
 	private buildDeviceChoices(): DeviceChoice[] {
 		return this.discoveredDevices
 			.filter((device) => matchDeviceProfile(device.model, device.productType))
 			.map((device) => ({
 				host: device.host,
-				label: resolveDeviceModel(device.model, device.productType),
+				// L4: include the IP so two units of the same model can be told apart
+				label: `${resolveDeviceModel(device.model, device.productType)} (${device.host})`,
 			}))
 	}
 
-	/**
-	 * 扫描网络发现设备
-	 */
+	/** Discover devices on the network */
 	private async scanDevices(): Promise<DeviceInfo[]> {
 		this.log('debug', '[Scan] Starting UDP broadcast device discovery')
 		const scanner = new CommunicationManager({
@@ -462,13 +529,14 @@ export class ModuleInstance extends InstanceBase<ModuleConfig> {
 				this.log(level, message)
 			},
 		})
+		this.scanner = scanner
 
 		try {
 			await scanner.scanNetwork()
 			const allDevices = scanner.getDiscoveredDevices()
-			// 仅保留已在产品档案中建档的型号，避免未知设备（如 SE2017）进入下拉框
+			// Keep only models with a profile, so unknown devices (e.g. SE2017) never reach the dropdown
 			const devices = allDevices.filter((d) => matchDeviceProfile(d.model, d.productType))
-			// M4：扫描结果为空时，保留先前的设备列表，避免下拉框 / MAC 信息丢失
+			// M4: when the scan is empty, keep the previous device list so the dropdown / MAC info is not lost
 			if (devices.length > 0) {
 				this.discoveredDevices = devices
 			}
@@ -477,7 +545,7 @@ export class ModuleInstance extends InstanceBase<ModuleConfig> {
 			if (ignored.length > 0) {
 				this.log(
 					'warn',
-					`[Scan] Ignored ${ignored.length} unsupported device(s): ${ignored.map((d) => `${d.model}@${d.host}`).join(', ')} (可在配置里手动指定 Device Model 并手填 Target IP)`,
+					`[Scan] Ignored ${ignored.length} unsupported device(s): ${ignored.map((d) => `${d.model}@${d.host}`).join(', ')} (set Device Model manually and type the Target IP)`,
 				)
 			}
 
@@ -499,6 +567,7 @@ export class ModuleInstance extends InstanceBase<ModuleConfig> {
 			return []
 		} finally {
 			scanner.disconnect()
+			if (this.scanner === scanner) this.scanner = undefined
 		}
 	}
 
@@ -509,13 +578,14 @@ export class ModuleInstance extends InstanceBase<ModuleConfig> {
 			return
 		}
 
-		// 当前连接目标对应的扫描信息（可能因手动输入 IP 而不存在）
+		// Scan info of the current target (may be missing when the IP was typed manually)
 		const targetDevice = this.discoveredDevices.find((d) => d.host === this.config.host)
-		// 依据扫描到的型号（或设备类型标识）切换产品档案
-		this.applyDeviceProfile(targetDevice?.model, targetDevice?.productType)
+		// Manual Device Model (when enabled) wins over the scanned model
+		const manualProfile = this.config.manualModel ? getProfileById(this.config.deviceModel) : undefined
+		this.applyDeviceProfile(targetDevice?.model, targetDevice?.productType, manualProfile?.id)
 		const modelLabel = targetDevice
 			? resolveDeviceModel(targetDevice.model, targetDevice.productType)
-			: 'Unknown (manual IP)'
+			: (manualProfile?.displayName ?? 'Unknown (manual IP)')
 
 		this.log('info', '========================================')
 		this.log('info', 'Establishing UDP connection to device')
@@ -527,14 +597,16 @@ export class ModuleInstance extends InstanceBase<ModuleConfig> {
 		this.comm = new CommunicationManager({
 			host: this.config.host,
 			port: DEVICE_PORT,
-			// H4K 无 0xEEEE 心跳，用协议内的 0x0001 做在线探测；其它协议族保持原逻辑
+			// H4K has no 0xEEEE heartbeat; its own 0x0001 command is used as the liveness probe. Other families keep the previous logic
 			probeCommand: this.protocolFamily.probeCommand,
+			// L6: H4K reports are fully handled by onReport; skip the duplicate data path
+			skipReportDataCallback: this.protocolFamily.parseQueryReplies === true,
 			onLog: (level, message) => {
 				this.log(level, message)
 			},
 		})
 
-		// 心跳包需要目标设备的 MAC 与型号，使用扫描结果中匹配的条目
+		// The heartbeat needs the target MAC and model, taken from the matching scan entry
 		this.comm.setTargetDevice(targetDevice)
 
 		this.comm.setCallbacks({
@@ -549,15 +621,15 @@ export class ModuleInstance extends InstanceBase<ModuleConfig> {
 					this.log('info', '  Heartbeat: active, monitoring this device')
 					this.log('info', '========================================')
 					this.setVariableValues({ connection_status: 'Connected' })
-					// M6：预设已在 init / applyDeviceProfile 中注册，不随在线状态摇予。
-					// L2：重连后重新拉起闪烁（若 FTB/MUTE/Freeze 仍处于激活态）。
+					// M6: presets are registered in init / applyDeviceProfile and no longer follow the online state.
+					// L2: restart blinking after a reconnect (if FTB/MUTE/Freeze is still active).
 					this.updateBlink()
-					// 主动获取一轮设备状态（H4K 无 0x0110 全量上报）
+					// Query one round of device state (H4K has no full 0x0110 report)
 					void this.queryDeviceState()
 				} else {
 					this.log('warn', `Connection status: ${status} - ${message || 'unknown'}`)
 					this.setVariableValues({ connection_status: 'Disconnected' })
-					// M6：不再因临时离线而清空预设，避免预设区域在展示时“突然消失”。
+					// M6: do not clear presets on a temporary disconnect, so the preset area does not vanish
 				}
 			},
 			onData: (data, host, port, cmd, session) => {
@@ -577,7 +649,7 @@ export class ModuleInstance extends InstanceBase<ModuleConfig> {
 			connection_status: 'Connecting',
 		})
 
-		// M2：记录当前正在建立的 host，供 configUpdated 对比判断是否需要重连
+		// M2: record the host being connected, so configUpdated can compare and decide whether to reconnect
 		this.connectedHost = this.config.host
 
 		void this.comm.connect()
@@ -592,12 +664,12 @@ export class ModuleInstance extends InstanceBase<ModuleConfig> {
 		if (this.blinkTimer) {
 			clearInterval(this.blinkTimer)
 			this.blinkTimer = undefined
-			// L2：销毁时相位复位，使重连后能从头开始闪烁，不会因残留 off 相位造成“不闪”
+			// L2: reset the phase on destroy so blinking restarts from the beginning after a reconnect
 			this.deviceState.blinkOn = true
 		}
 	}
 
-	/** 发送协议“设置指令”（Data = Param_Vaild(参数索引) + 值） */
+	/** Send a protocol set command (Data = Param_Vaild(parameter index) + value) */
 	public async sendProtocolSet(commandKey: string, fieldIndex: number, value: number, label: string): Promise<boolean> {
 		if (!this.comm) {
 			this.log('error', `[Set] Cannot set ${label}: communication not initialized`)
@@ -613,22 +685,23 @@ export class ModuleInstance extends InstanceBase<ModuleConfig> {
 			this.log('error', `[Set] ${label}: invalid field index ${fieldIndex}`)
 			return false
 		}
-		// 只输出命令/字段/值；Param_Vaild（报文头部字节）仅本地调试时输出
+		// Log only command/field/value; Param_Vaild (packet header bytes) is logged only for local debugging
 		const validInfo = LOG_RAW_PACKETS ? `, valid=0x${data.readUInt32BE(0).toString(16)}` : ''
 		this.log(
-			'info',
+			'debug',
 			`[Set] ${label} -> ${value} (cmd=0x${cmd.set.toString(16).padStart(4, '0')}, field=${fieldIndex}${validInfo})`,
 		)
 		const ok = await this.comm.sendCommand(cmd.set, data)
-		if (ok && this.pendingFlashKey) this.flash(this.pendingFlashKey)
+		const flashKey = this.flashKeyContext.getStore()
+		if (ok && flashKey) this.flash(flashKey)
 		return ok
 	}
 
 	private handleDeviceData(data: Buffer, host: string, port: number, cmd?: number, session?: number): void {
 		this.log('debug', `Device data from ${host}:${port}, length: ${data.length} bytes`)
-		// onData 回调传入的已经是 payload（Data 段，偏移 25 起）。
-		// H4K（parseQueryReplies）：直接按 payload 解析，这样 Pack_Type=1 的查询应答才能同步状态；
-		// 0617/0605：保持历史行为（原逻辑再当整帧解析一次），不改旧族的状态同步路径。
+		// onData already receives the payload (Data section, from offset 25).
+		// H4K (parseQueryReplies): parse the payload directly, so Pack_Type=1 query replies can sync state;
+		// 0617/0605: keep the historic behaviour (parse the whole frame again) and do not touch the old state path.
 		const payload: Buffer | undefined = this.protocolFamily.parseQueryReplies ? data : UDPParser.parse(data)?.data
 		const response = parseDeviceResponse(data.toString('ascii'), cmd, session, data, {
 			legacyPowerCommands: this.protocolFamily.legacyPowerCommands,
@@ -649,7 +722,7 @@ export class ModuleInstance extends InstanceBase<ModuleConfig> {
 				this.log('debug', `Heartbeat received - MAC: ${mac}, Controllable: ${controllable ? 'Yes' : 'No'}`)
 			},
 			onCustomData: (custom) => {
-				// 按设备回包同步状态（传入解析后的 payload）
+				// Sync state from the device reply (using the parsed payload)
 				if (payload && payload.length > 0) {
 					this.syncSwitchState(custom.cmd, payload)
 				} else {
@@ -663,22 +736,22 @@ export class ModuleInstance extends InstanceBase<ModuleConfig> {
 	}
 
 	private handleDeviceReport(packet: ParsedPacket): void {
-		// mapped：该上报 CMD 能匹配到协议表里的哪个“获取指令”（匹配不到就是命令表里没建档）
+		// mapped: which "get command" of the command table this report CMD matches (NONE = not registered)
 		const mapped = Object.keys(this.protocolCommands).find((k) => this.protocolCommands[k].get === packet.cmd)
 		this.log(
 			'debug',
 			`[Report] Device report - Cmd: 0x${packet.cmd.toString(16).padStart(4, '0')}, Type: 0x${packet.type.toString(16)}, Data(${packet.data.length}B)${LOG_RAW_PACKETS ? `: ${packet.data.toString('hex')}` : ''}, mapped=${mapped ?? 'NONE'}`,
 		)
-		// 按设备主动上报同步 PGM/PVW 当前值
+		// Sync the current PGM/PVW values from the device report
 		this.syncSwitchState(packet.cmd, packet.data)
 	}
 
 	/**
-	 * 根据设备主动上报/回包同步状态。
-	 * - cmd=0x000a：切换台状态（Data = PGM, PVW, MV）
-	 * - cmd=0x0110：状态上报，字节布局按协议族（见 ProtocolFamily.stateReport）
-	 *     0617：10B [0]PGM [1]PVW [2]WIPE [3]SPEED [4]FTB [5]Freeze [6..7]T_Bar_val [8..9]b_bar_pos
-	 *     H4K ：9B  [0]PGM [1]PVW [2]WIPE [3]SPEED [4]FTB [5]Freeze [6]T_Bar_Pos [7..8]T_Bar_Val
+	 * Sync state from a device report/reply.
+	 * - cmd=0x000a: switcher state (Data = PGM, PVW, MV)
+	 * - cmd=0x0110: state report, byte layout per protocol family (see ProtocolFamily.stateReport)
+	 *     0617: 10B [0]PGM [1]PVW [2]WIPE [3]SPEED [4]FTB [5]Freeze [6..7]T_Bar_val [8..9]b_bar_pos
+	 *     H4K : 9B  [0]PGM [1]PVW [2]WIPE [3]SPEED [4]FTB [5]Freeze [6]T_Bar_Pos [7..8]T_Bar_Val
 	 */
 	private syncSwitchState(cmd: number | undefined, data: Buffer): void {
 		if (cmd === undefined || !data) return
@@ -696,15 +769,15 @@ export class ModuleInstance extends InstanceBase<ModuleConfig> {
 			this.handleGetReport(cmd, data)
 			return
 		}
-		// 设备主动上报（Pack_Type=2）只带字段本身；主动查询回包（Pack_Type=1）可能多带
-		// 4 字节 Param_Vaild 前缀，按实际长度判定字段起始偏移。
+		// An active report (Pack_Type=2) carries only the fields; a query reply (Pack_Type=1) may add a
+		// 4-byte Param_Vaild prefix, so the field start offset is derived from the actual length.
 		const base = data.length >= spec.size + 4 ? 4 : 0
 		if (data.length < spec.size + base) {
 			this.log('debug', `[Report 0x0110] payload too short: ${data.length}B (need ${spec.size + base}B)`)
 			return
 		}
 
-		// 按协议族布局取值（H4K 的 T_Bar 位置/值顺序不同）
+		// Read fields using the family layout (H4K orders T-Bar position/value differently)
 		const readField = (f?: { offset: number; size: number }): number => {
 			if (!f) return 0
 			return f.size === 1 ? data[base + f.offset] : data.readUInt16BE(base + f.offset)
@@ -719,17 +792,17 @@ export class ModuleInstance extends InstanceBase<ModuleConfig> {
 		const tBarVal = readField(spec.tBarValue)
 		const bBarPos = readField(spec.bBarPos)
 		this.log(
-			'info',
+			'debug',
 			`[Report 0x0110] PGM=${pgmVal}, PVW=${pvwVal}, WIPE=${wipeMode}, SPEED=${speedMode}, FTB=${ftbState}, Freeze=${freezeState}, T_Bar_Pos=${tBarPos}, T_Bar=${tBarVal}, b_bar_pos=${bBarPos} (${data.length}B, offset ${base})`,
 		)
 
-		// 1) PGM / PVW 当前源（按协议族的输入路数换算 Pattern）→ 同步按钮颜色
+		// 1) Current PGM / PVW source (Pattern converted by the family input count) -> sync button colours
 		this.lastReplyAt.set('state', Date.now())
 		this.deviceState.pgmSource = this.toSourceValue(pgmVal)
 		this.deviceState.pvwSource = this.toSourceValue(pvwVal)
 		this.applySwitchFeedback(cmd)
 
-		// 2) FTB / Freeze 状态（变化时闪烁）
+		// 2) FTB / Freeze state (blink on change)
 		if (this.deviceState.ftbActive !== (ftbState === 1)) {
 			this.deviceState.ftbActive = ftbState === 1
 			this.flash('key:19')
@@ -742,17 +815,18 @@ export class ModuleInstance extends InstanceBase<ModuleConfig> {
 		}
 		this.checkFeedbacks('ftb_active', 'freeze_active')
 
-		// WIPE 模式（1~6）
+		// Wipe mode (1~6)
 		this.deviceState.wipeMode = wipeMode
 		this.checkFeedbacks('wipe_active')
 
-		// 3) T-Bar 位置：以原始值（0~tBarMax，H4K 为 0~4095）为基准，显示换算成 0~500
+		// 3) T-Bar position: based on the raw value (0~tBarMax, 0~4095 on H4K), displayed as 0~500
 		const tBarMax = this.protocolFamily.tBarMax ?? 4095
 		const reported = Math.min(Math.max(tBarVal, 0), tBarMax)
 		this.lastReportedTBar = reported
-		// H4K（parseQueryReplies）：本地刚下发过的锁定期内、或回读与本地目标差异在一个档位内时，
-		// 不被回读覆盖——否则设备平滑/标定误差会让下一次 ±step 的基准漂移，
-		// 表现就是“点 10 档却走不到 10 档”。差异较大则视为物理推杆操作，跟随同步。
+		// H4K (parseQueryReplies): within the hold window after a local send, or when the read-back differs
+		// from the local target by less than one step, the read-back must not override it - otherwise smoothing /
+		// calibration error drifts the base of the next +/- step ("10 steps does not reach 10").
+		// A larger difference means the physical T-Bar moved, so it is followed.
 		const tbarTolerance = Math.max(Math.round(tBarMax * 0.04), 16)
 		const holdLocalTBar =
 			this.protocolFamily.parseQueryReplies === true &&
@@ -762,7 +836,7 @@ export class ModuleInstance extends InstanceBase<ModuleConfig> {
 		this.deviceState.tbarValue = disp
 		this.deviceState.speedMode = speedMode
 
-		// 4) 全部上报值 -> 变量
+		// 4) Publish all reported values as variables
 		this.setVariableValues({
 			pgm_source: this.sourceLabel(this.deviceState.pgmSource),
 			pvw_source: this.sourceLabel(this.deviceState.pvwSource),
@@ -777,24 +851,24 @@ export class ModuleInstance extends InstanceBase<ModuleConfig> {
 		})
 	}
 
-	/** WIPE 模式值 -> 文本 */
+	/** Wipe mode value -> text */
 	private wipeLabel(v: number): string {
 		return ['', 'WIPE1', 'WIPE2', 'WIPE3', 'WIPE4', 'MIX', 'DIP'][v] ?? String(v)
 	}
 
-	/** Key Type（0x0130）值 -> 文本：0=PIP / 1=Luma / 2=Chroma / 3=DSK */
+	/** Key Type (0x0130) value -> text: 0=PIP / 1=Luma / 2=Chroma / 3=DSK */
 	public keyTypeLabel(v: number): string {
 		return ['PIP', 'LUMA', 'CHROMA', 'DSK'][v] ?? `UNKNOWN(${v})`
 	}
 
-	/** 是否为 PIP/LUMA/CHROMA/DSK 及其 ON AIR 按键（用于刷新 0x0130 激活态） */
+	/** Whether a key value is a PIP/LUMA/CHROMA/DSK or ON AIR key (used to refresh the 0x0130 active layer) */
 	private isKeyModuleKey(keyVal: number): boolean {
 		const k = this.protocolFamily.keyMap
 		const groups = [k.pip, k.pipOnAir, k.luma, k.lumaOnAir, k.chroma, k.chromaOnAir, k.dsk, k.dskOnAir]
 		return keyVal > 0 && groups.includes(keyVal)
 	}
 
-	/** 主动查询一次 Key Type（0x0130 空 payload），用于按 Key 键后的激活态刷新（仅 H4K） */
+	/** Query Key Type once (0x0130 with empty payload) to refresh the active layer after a key press (H4K only) */
 	public async queryKeyTypeOnce(): Promise<void> {
 		if (!this.comm) return
 		const cmd = this.protocolCommands['keyType']
@@ -803,23 +877,21 @@ export class ModuleInstance extends InstanceBase<ModuleConfig> {
 	}
 
 	/**
-	 * 本地先行标记激活层（不发 0x0030），400ms 后以 0x0130 回读校准。
-	 * 仅用于 H4K；旧族无 keyType 命令直接返回。
+	 * Mark the active layer locally (without writing 0x0030), then calibrate it from the 0x0130 read-back 400 ms later.
+	 * H4K only; families without the keyType command return immediately.
 	 */
 	public markKeyTypeLocal(k: number): void {
 		if (!this.protocolCommands['keyType']) return
 		this.deviceState.keyType = k
 		this.setVariableValues({ key_type: k, key_type_label: this.keyTypeLabel(k) })
 		this.checkFeedbacks()
-		setTimeout(() => {
-			void this.queryKeyTypeOnce()
-		}, 400)
+		this.schedule(() => void this.queryKeyTypeOnce(), 400)
 	}
 
 	/**
-	 * 仅 H4K：PIP / LUMA / CHROMA 三者互斥，不能同时激活。
-	 * 打开某一层之前把另外两层的 Status 置 0（DSK 是下游叠加，不参与互斥）。
-	 * 旧族（0617/0605）没有 keyType 命令，直接返回，行为不变。
+	 * H4K only: PIP / LUMA / CHROMA are mutually exclusive and cannot be active together.
+	 * Before enabling one layer, set the Status of the other two to 0 (DSK is a downstream overlay and not part of the mutex).
+	 * Old families (0617/0605) have no keyType command and return immediately, so their behaviour is unchanged.
 	 */
 	public async closeOtherKeys(keep: string): Promise<void> {
 		if (!this.protocolCommands['keyType']) return
@@ -831,8 +903,8 @@ export class ModuleInstance extends InstanceBase<ModuleConfig> {
 	}
 
 	/**
-	 * 上报源值 -> 内部源值（1~N / 0xF0=Pattern1 / 0xF1=Pattern2，N 按协议族）。
-	 * 0617 与 H4K 的 0x0110 均为 1 基：1~N = IN1~INn，N+1 = PAT1，N+2 = PAT2，0 = BLACK。
+	 * Reported source value -> internal source value (1~N / 0xF0=Pattern1 / 0xF1=Pattern2, N per family).
+	 * The 0x0110 report is 1-based on both 0617 and H4K: 1~N = IN1~INn, N+1 = PAT1, N+2 = PAT2, 0 = BLACK.
 	 */
 	private toSourceValue(v: number): number {
 		const n = this.protocolFamily.inputCount
@@ -844,21 +916,22 @@ export class ModuleInstance extends InstanceBase<ModuleConfig> {
 	}
 
 	/**
-	 * 处理“获取指令”的回包/上报：
-	 * - 设备主动上报（Pack_Type=2）：CMD 为同步指令码（如 0x0120）
-	 * - 上位机主动获取（Pack_Type=1）：设备用【控制指令码】回全量（如 0x0020，见协议文档 3.2 通用说明）
-	 *   设置成功时也会用同一控制指令码回 1 字节 Report Code，靠数据长度排除。
+	 * Handle replies/reports of "get commands":
+	 * - Device active report (Pack_Type=2): CMD is the sync command code (e.g. 0x0120)
+	 * - Host query (Pack_Type=1): the device answers with the control command code (e.g. 0x0020, see protocol doc 3.2);
+	 *   a successful set also answers with the same control code and a 1-byte Report Code, excluded by length.
 	 */
 	private handleGetReport(cmd: number, data: Buffer): void {
 		const commands = this.protocolCommands
 		const hex = (v: number): string => `0x${v.toString(16).padStart(4, '0')}`
 
-		// 1) 主动上报：CMD 就是同步指令码
+		// 1) Active report: CMD is the sync command code
 		let key = Object.keys(commands).find((k) => commands[k].get === cmd)
 		let source: 'report' | 'query' = 'report'
 
-		// 2) 主动获取的回复：CMD 是控制指令码，且数据长度覆盖完整字段
-		//    注意：1 字节一定是设置应答（Report Code），不能当成字段值（如 keyType 只有 1 个字段时会歧义）
+		// 2) Query reply: CMD is the control command code and the data covers all fields
+		//    Note: a 1-byte payload is always a set reply (Report Code) and must not be read as a field value
+		//    (ambiguous for commands with a single field such as keyType)
 		if (!key) {
 			key = Object.keys(commands).find((k) => {
 				const c = commands[k]
@@ -870,48 +943,46 @@ export class ModuleInstance extends InstanceBase<ModuleConfig> {
 		}
 
 		if (!key) {
-			// H4K：设置指令的应答（Data = 1 字节 Report Code），输出下来才能判断设备到底有没有接受
+			// H4K: set-command reply (Data = 1-byte Report Code); logging it shows whether the device accepted the value
 			if (this.protocolFamily.queryAllOnConnect && data.length === 1) {
 				const isSetReply = Object.keys(commands).some((k) => commands[k].set === cmd)
 				if (isSetReply) {
 					this.log(
-						'info',
+						'debug',
 						`[Reply] 0x${cmd.toString(16).padStart(4, '0')} Report Code=${data[0]} (${data[0] === 0 ? 'success' : 'fail'})`,
 					)
 					return
 				}
 			}
-			// 记录未映射的上报/回包（如 H4K 的 0x0001/0x0002），便于排查协议差异
-			// H4K 用 info 输出：设备主动上报了但命令表里没有对应“获取码”时必须看得见
+			// Record unmapped reports/replies (e.g. H4K 0x0001/0x0002) to help diagnose protocol differences
 			const unhandled = `[Report] Unhandled cmd=${hex(cmd)} (${data.length}B)${LOG_RAW_PACKETS ? ` data=${data.toString('hex')}` : ''}`
-			if (this.protocolFamily.parseQueryReplies) this.log('info', unhandled)
-			else this.log('debug', unhandled)
+			this.log('debug', unhandled)
 			return
 		}
 
 		if (source === 'query') {
-			this.log('info', `[Query Reply] ${hex(cmd)} -> ${key} (${data.length}B)`)
+			this.log('debug', `[Query Reply] ${hex(cmd)} -> ${key} (${data.length}B)`)
 		}
 		this.applyGetReport(key, data)
 		this.syncDerivedFromReport(key)
 		this.lastReplyAt.set(key, Date.now())
 	}
 
-	/** 按字段长度通用拆包，存入 reportState（GET 回包布局与 SET 可能不同） */
+	/** Split a reply into fields by size and store it in reportState (GET layout may differ from SET) */
 	private applyGetReport(key: string, data: Buffer): void {
 		const cmd = this.protocolCommands[key]
-		// H4K 的 GET 与 SET 字段不一致（如 luma GET 16B / SET 21B、audio GET 29B / SET 34B）
+		// H4K GET and SET fields differ (e.g. luma GET 16B / SET 21B, audio GET 29B / SET 34B)
 		const getFields = cmd.getFields ?? cmd.fields
 		const setFields = cmd.fields
 		const lenOf = (fs: typeof getFields): number => fs.reduce((sum, f) => sum + f.size, 0)
 		const getLen = lenOf(getFields)
 		const setLen = lenOf(setFields)
 
-		// 布局选择（仅 H4K）：
-		// - 主动上报 / 查询应答用 GET 布局（0x0130 = 1B、0x0131 = 16B、0x0132 = 32B）
-		// - 个别固件改用控制指令码上报且带 SET 布局尾部字段（含 Reset 等）
-		// 按实际长度精确判定，避免多出的字节被当成前缀导致整段字段错位。
-		// 0617/0605 保持历史行为（只用 GET 布局）。
+		// Layout selection (H4K only):
+		// - active reports / query replies use the GET layout (0x0130 = 1B, 0x0131 = 16B, 0x0132 = 32B)
+		// - some firmware reports with the control command code and the SET layout tail fields (including Reset)
+		// Derive it from the exact length, so extra bytes are not mistaken for a prefix and shift every field.
+		// 0617/0605 keep the historic behaviour (GET layout only).
 		let fields = getFields
 		let layout: 'GET' | 'SET' = 'GET'
 		if (this.protocolFamily.parseQueryReplies && cmd.getFields && setLen !== getLen) {
@@ -923,7 +994,7 @@ export class ModuleInstance extends InstanceBase<ModuleConfig> {
 			}
 		}
 		const need = lenOf(fields)
-		// 主动上报（Pack_Type=2）只带字段本身；个别固件的查询回包会在前面多带 4 字节 Param_Vaild
+		// An active report (Pack_Type=2) carries only the fields; some firmware adds a 4-byte Param_Vaild prefix to query replies
 		const base = need > 0 && data.length >= need + 4 ? 4 : 0
 		const values: number[] = []
 		let off = base
@@ -935,7 +1006,7 @@ export class ModuleInstance extends InstanceBase<ModuleConfig> {
 			off += f.size
 		}
 		this.reportState[key] = values
-		// H4K 打印“字段名=值”，直接可以看出每个上报字段到底解析成了什么；旧族保持原格式
+		// H4K logs "field=value" so every parsed field is visible; old families keep the previous format
 		const detail = fields
 			.slice(0, values.length)
 			.map((f, i) => `${f.name}=${values[i]}`)
@@ -946,13 +1017,13 @@ export class ModuleInstance extends InstanceBase<ModuleConfig> {
 		this.log('info', `${msg} (${data.length}B, offset ${base})`)
 	}
 
-	/** 依据上报的获取指令刷新对应反馈/状态 */
+	/** Refresh the matching feedback/state from a reported get command */
 	private syncDerivedFromReport(key: string): void {
 		const vals = this.reportState[key] ?? []
 		switch (key) {
 			case 'transition': {
 				this.verifyWipeReport(vals)
-				// 各 Wipe 通道的样式值 -> 变量/反馈（0x0120 回读；H4K 3 组，0617 4 组）
+				// Per-wipe style values -> variables / feedbacks (0x0120 read-back; 3 wipes on H4K, 4 on 0617)
 				const wipeVars: Record<string, string> = {}
 				for (let n = 1; n <= 4; n++) {
 					const v = vals[n - 1]
@@ -998,7 +1069,7 @@ export class ModuleInstance extends InstanceBase<ModuleConfig> {
 				this.checkFeedbacks('logo_status_active')
 				break
 			case 'keyType': {
-				// 0x0130：当前激活的 Key 模块（0=PIP / 1=Luma / 2=Chroma / 3=DSK）
+				// 0x0130: currently active key module (0=PIP / 1=Luma / 2=Chroma / 3=DSK)
 				const kt = vals[0]
 				if (kt !== undefined) {
 					if (kt !== this.deviceState.keyType) {
@@ -1015,14 +1086,14 @@ export class ModuleInstance extends InstanceBase<ModuleConfig> {
 		}
 	}
 
-	/** 读取某“获取指令”解析后的字段值 */
+	/** Read a parsed field value of a get command */
 	public getReportState(key: string): number[] {
 		return this.reportState[key] ?? []
 	}
 
 	/**
-	 * 取某“获取指令”回包里某字段的下标（按 GET 布局）。
-	 * 反馈不能写死索引：H4K 的 LUMA/DSK 没有 Tie 字段，Status 在 0 而不是 1。
+	 * Index of a field in a get-command reply (GET layout).
+	 * Feedbacks must not hard-code indices: H4K LUMA/DSK have no Tie field, so Status is at 0 instead of 1.
 	 */
 	public getReportFieldIndex(commandKey: string, fieldName: string): number {
 		const cmd = this.protocolCommands[commandKey]
@@ -1031,10 +1102,10 @@ export class ModuleInstance extends InstanceBase<ModuleConfig> {
 		return fields.findIndex((f) => f.name === fieldName)
 	}
 
-	/** 刷新 PGM/PVW 反馈与变量 */
+	/** Refresh PGM/PVW feedbacks and variables */
 	private applySwitchFeedback(cmd: number): void {
 		this.log(
-			'info',
+			'debug',
 			`[Switch] PGM=${this.deviceState.pgmSource}, PVW=${this.deviceState.pvwSource} (cmd=0x${cmd.toString(16).padStart(4, '0')})`,
 		)
 		this.checkFeedbacks('pgm_active', 'pvw_active')
@@ -1045,7 +1116,7 @@ export class ModuleInstance extends InstanceBase<ModuleConfig> {
 	}
 
 	public async scanForDevices(): Promise<DeviceInfo[]> {
-		// 手动触发扫描，与初始化扫描共用互斥标记，避免并发叠加
+		// Manual scan shares the mutex with the start-up scan, so they cannot overlap
 		if (this.scanInProgress) {
 			this.log('info', '[Scan] Scan already in progress, ignoring duplicate request')
 			return this.discoveredDevices
@@ -1064,9 +1135,18 @@ export class ModuleInstance extends InstanceBase<ModuleConfig> {
 			return false
 		}
 
-		const { cmd, data } = buildCommand(commandId, params, { keyPressFormat: this.protocolFamily.keyPressFormat })
+		// Guard the builder: it throws when no valid key/T-Bar data is supplied (e.g. a key map without
+		// a value for a wipe channel). Returning false keeps the action promise resolved instead of crashing.
+		let built: { cmd: number; data: Buffer }
+		try {
+			built = buildCommand(commandId, params, { keyPressFormat: this.protocolFamily.keyPressFormat })
+		} catch (error) {
+			this.log('error', `[Action] Cannot build ${commandId}: ${(error as Error).message}`)
+			return false
+		}
+		const { cmd, data } = built
 
-		// 对于KEY_PRESS命令，根据keyVal映射到具体的按钮名称
+		// For KEY_PRESS commands, map keyVal to the button name
 		let actionLabel = commandId
 		if (commandId === 'KEY_PRESS' && params?.keyVal !== undefined) {
 			const keyVal = params.keyVal as number
@@ -1079,18 +1159,17 @@ export class ModuleInstance extends InstanceBase<ModuleConfig> {
 
 		if (success) {
 			this.log('info', `[Action] ${actionLabel} sent successfully`)
-			// 乐观更新 + 执行闪烁反馈（key 由动作包裹器统一设置）
+			// Optimistic update + action flash (the key is set by the action wrapper)
 			const keyVal = params?.keyVal as number | undefined
 			if (commandId === 'KEY_PRESS' && typeof keyVal === 'number') {
 				this.optimisticKey(keyVal)
-				// H4K：按下 PIP/LUMA/CHROMA/DSK（含 ON AIR）键后刷新当前激活的 Key 模块（0x0130）
+				// H4K: after pressing a PIP/LUMA/CHROMA/DSK (or ON AIR) key, refresh the active key module (0x0130)
 				if (this.protocolCommands['keyType'] && this.isKeyModuleKey(keyVal)) {
-					setTimeout(() => {
-						void this.queryKeyTypeOnce()
-					}, 300)
+					this.schedule(() => void this.queryKeyTypeOnce(), 300)
 				}
 			}
-			if (this.pendingFlashKey) this.flash(this.pendingFlashKey)
+			const flashKey = this.flashKeyContext.getStore()
+			if (flashKey) this.flash(flashKey)
 		} else {
 			this.log('error', `[Action] Failed to send: ${actionLabel}`)
 		}
@@ -1099,8 +1178,8 @@ export class ModuleInstance extends InstanceBase<ModuleConfig> {
 	}
 
 	/**
-	 * 发送成功后的乐观状态更新（以设备上报为准，随后会被校正）。
-	 * 键值表按当前协议族取（0617 与 H4K 的键值完全不同）。
+	 * Optimistic state update after a successful send (the device report is authoritative and corrects it later).
+	 * The key map is taken from the current family (0617 and H4K key values are completely different).
 	 */
 	private optimisticKey(keyVal: number): void {
 		const keys = this.protocolFamily.keyMap
@@ -1123,17 +1202,18 @@ export class ModuleInstance extends InstanceBase<ModuleConfig> {
 			this.deviceState.pvwSource = pvwPatternIdx === 0 ? 0xf0 : 0xf1
 			this.applySwitchFeedback(0x0110)
 		} else if (keyVal === keys.auto) {
-			// L4：AUTO 视为瞬时动作——短暂点亮后自动释放，避免“常亮不灭”。
+			// AUTO is treated as a momentary action: light briefly, then release automatically
 			this.deviceState.autoActive = true
 			this.checkFeedbacks('auto_active')
-			setTimeout(() => {
+			// L2: registered timer, so destroy() releases it
+			this.schedule(() => {
 				this.deviceState.autoActive = false
 				this.checkFeedbacks('auto_active')
 			}, 800)
 		} else if (keyVal === keys.ftb) {
 			this.deviceState.ftbActive = !this.deviceState.ftbActive
 			this.checkFeedbacks('ftb_active')
-			// L3：本地翻转后同步拉起/停止闪烁，避免“常亮不闪”
+			// Start/stop blinking after the local flip, so the button never stays solid without blinking
 			this.updateBlink()
 		} else if (keyVal === keys.mute) {
 			this.deviceState.muteActive = !this.deviceState.muteActive
@@ -1155,7 +1235,7 @@ export class ModuleInstance extends InstanceBase<ModuleConfig> {
 		}
 	}
 
-	/** 记录“最近执行的 action key”，约 400ms 后清除（供执行闪烁反馈） */
+	/** Record the "last executed action key" and clear it after ~400 ms (drives the action-flash feedback) */
 	private flash(key: string): void {
 		this.deviceState.lastAction = key
 		this.setVariableValues({ last_action: key })
@@ -1168,7 +1248,7 @@ export class ModuleInstance extends InstanceBase<ModuleConfig> {
 		}, 400)
 	}
 
-	/** FTB/MUTE/Freeze 定时闪烁：开启时按 ~500ms 切换相位并刷新反馈（红底白字 ↔ 黑底白字） */
+	/** FTB/MUTE/Freeze blink: while active, toggle the phase every ~500 ms and refresh feedbacks (red on white <-> black on white) */
 	private updateBlink(): void {
 		const need = this.deviceState.ftbActive || this.deviceState.muteActive || this.deviceState.freezeActive
 		if (need && !this.blinkTimer) {
@@ -1184,7 +1264,7 @@ export class ModuleInstance extends InstanceBase<ModuleConfig> {
 		}
 	}
 
-	/** 源值 -> 名称（用于变量/日志展示） */
+	/** Source value -> name (used by variables/logs) */
 	private sourceLabel(value: number): string {
 		if (value >= 1 && value <= 6) return `IN${value}`
 		if (value === 0xf0) return 'Pattern1'
@@ -1193,7 +1273,7 @@ export class ModuleInstance extends InstanceBase<ModuleConfig> {
 	}
 
 	private getButtonNameByKeyVal(keyVal: number): string {
-		// 键值表按当前协议族取（0617 与 H4K 键值完全不同）
+		// The key map is taken from the current family (0617 and H4K key values are completely different)
 		const keys = this.protocolFamily.keyMap
 		const indexLabel = (arr: number[], prefix: string): string | undefined => {
 			const i = arr.indexOf(keyVal)
@@ -1235,27 +1315,27 @@ export class ModuleInstance extends InstanceBase<ModuleConfig> {
 	}
 
 	/**
-	 * 移动 T-Bar（0x0010）：0617 为 Param_Vaild=1 + T_Bar_val；H4K 为位域 + Key_type=2 + Key_val
-	 * 对外显示刻度 0~500，内部按 0~tBarMax（4095）等比例换算后下发。
+	 * Move the T-Bar (0x0010): 0617 uses Param_Vaild=1 + T_Bar_val; H4K uses the bitmask + Key_type=2 + Key_val.
+	 * The UI scale is 0~500 and is converted proportionally to 0~tBarMax (4095) before sending.
 	 * direction: 1=Up / 0=Down
 	 */
 	public async moveTBar(direction: number, step: number): Promise<boolean> {
 		const tBarMax = this.protocolFamily.tBarMax ?? 4095
-		// L5：未连接时不做乐观更新，避免变量与设备真值不一致
+		// No optimistic update while disconnected, so variables never disagree with the device
 		if (!this.comm?.getStatus()) {
 			this.log('warn', '[T-Bar] Not connected, ignoring move request')
 			return false
 		}
-		// 以原始值（0~tBarMax）为基准递增，避免 0~500 来回换算的累计误差
+		// Increment from the raw value (0~tBarMax) to avoid cumulative rounding errors from 0~500 conversions
 		const prevRaw = this.tbarRaw
 		const stepRaw = Math.max(1, Math.round((step * tBarMax) / 500))
 		const raw = Math.min(Math.max(direction === 1 ? this.tbarRaw + stepRaw : this.tbarRaw - stepRaw, 0), tBarMax)
-		// 连续点击需要基准递进：发送前先乐观更新 tbarRaw，发送失败时回滚
+		// Rapid clicks must advance the base: update tbarRaw optimistically before sending and roll back on failure
 		this.tbarRaw = raw
-		// 本地基准锺 5s：期间设备回读不覆写 tbarRaw，保证连续点击严格按 step 递增
+		// Lock the local base for 5 s: device read-backs must not override tbarRaw, so rapid clicks advance by exactly one step
 		this.tbarHoldUntil = Date.now() + 5000
 		const next = tBarMax > 0 ? Math.round((raw * 500) / tBarMax) : 0
-		// H4K：0x0010 + 动态 valid + Key_type=2 + 推杆值；0617：Param_Vaild=1 + T_Bar_val
+		// H4K: 0x0010 + dynamic valid + Key_type=2 + T-Bar value; 0617: Param_Vaild=1 + T_Bar_val
 		const format = this.protocolFamily.keyPressFormat
 		const percent = tBarMax > 0 ? Math.round((raw * 100) / tBarMax) : 0
 		const mode: TBarSendMode = this.protocolFamily.tBarSendMode ?? 'pos'
@@ -1267,32 +1347,30 @@ export class ModuleInstance extends InstanceBase<ModuleConfig> {
 		)
 		const ok = await this.sendToDevice('KEY_PRESS', { tBarVal: raw, tBarMode: mode })
 		if (!ok) {
-			// 发送失败 → 回滚本地基准，不更新显示变量
+			// Send failed -> roll back the local base and do not update the display variables
 			this.tbarRaw = prevRaw
 			this.tbarHoldUntil = 0
 			return false
 		}
-		// 发送成功后才写回显示与变量
+		// Write the display and variables only after a successful send
 		this.deviceState.tbarValue = next
 		this.setVariableValues({ tbar_value: String(next) })
-		// 推杆下发后回读 0x0110 校验；设备推杆有平滑/限速，延后 800ms 再读（上位机实测：设 3767 回读 3427）
+		// Verify the T-Bar by reading back 0x0110; the device smooths/limits movement, so wait 800 ms (measured: set 3767, read back 3427)
 		if (format === 'keytype' && this.protocolFamily.stateReport) {
 			const seq = ++this.tbarSendSeq
-			setTimeout(() => {
-				void this.verifyTBarApplied(raw, mode, seq)
-			}, 800)
+			this.schedule(() => void this.verifyTBarApplied(raw, mode, seq), 800)
 		}
 		return true
 	}
 
-	/** 主动查询一次设备状态（0x0110 空 payload），用于推杆/切换后的回读确认 */
+	/** Query device state once (0x0110 empty payload) to confirm read-backs after T-Bar moves or switches */
 	public async queryStateOnce(): Promise<void> {
 		if (!this.comm) return
 		const stateCmd = this.protocolCommands['state']
 		await this.comm.sendCommand(stateCmd?.get ?? 0x0110, Buffer.alloc(0))
 	}
 
-	/** 主动查询一次 Transition 状态（0x0120 空 payload），用于核对 Wipe1/2/3 是否落到正确通道（仅 H4K） */
+	/** Query transition state once (0x0120 empty payload) to check whether Wipe1/2/3 landed on the right channel (H4K only) */
 	public async queryTransitionOnce(): Promise<void> {
 		if (!this.comm) return
 		const cmd = this.protocolCommands['transition']
@@ -1300,27 +1378,27 @@ export class ModuleInstance extends InstanceBase<ModuleConfig> {
 		await this.comm.sendCommand(cmd.get, Buffer.alloc(0))
 	}
 
-	/** 各 Wipe 通道的样式值（[Wipe1, Wipe2, Wipe3, ...]，仅在收到 0x0120 回读后有值） */
+	/** Per-wipe style values ([Wipe1, Wipe2, Wipe3, ...]; only filled after a 0x0120 read-back) */
 	public getTransitionReport(): number[] {
 		return this.reportState['transition'] ?? []
 	}
 
-	/** WIPE 样式值 -> 文本（按协议族枚举查表，查不到时回退为数字） */
+	/** Wipe style value -> text (looked up in the family enumeration, falling back to the number) */
 	private wipeStyleLabel(v: number): string {
 		const styles = this.protocolFamily.wipeStyles ?? []
 		return styles.find((s) => s.id === v)?.label ?? String(v)
 	}
 
-	/** 登记 WIPE 样式写后校验目标（仅 H4K 的 trans_wipeN 动作会调用） */
+	/** Arm the wipe-style write check target (only called by the H4K trans_wipeN actions) */
 	public armWipeCheck(n: number, value: number): void {
 		const before = (this.reportState['transition'] ?? []).slice(0, 3)
 		this.pendingWipeCheck = { n, value, before, at: Date.now() }
 	}
 
 	/**
-	 * 用 0x0120 回读值校验下发的 WIPE 样式：
-	 * 日志会输出下发前后的 Wipe1/2/3 与发生变化的字段，便于判断字段映射是否错位
-	 * （若发送 Wipe2 但另一个字段变了 → 设备的划像编号与字段不对应）。
+	 * Verify the sent wipe style against the 0x0120 read-back:
+	 * the log prints Wipe1/2/3 before/after and which field changed, making wrong field mappings easy to spot
+	 * (if sending Wipe2 changes another field, the device wipe number and the field do not correspond).
 	 */
 	private verifyWipeReport(vals: number[]): void {
 		const pending = this.pendingWipeCheck
@@ -1338,44 +1416,43 @@ export class ModuleInstance extends InstanceBase<ModuleConfig> {
 		this.log(
 			ok ? 'info' : 'warn',
 			`[Wipe${pending.n}] sent=${pending.value} | before=[${before.join(', ')}] after=[${after.join(', ')}] ` +
-				`changed=[${changed.join(', ') || '无'}] -> Wipe${pending.n}=${actual} ${ok ? 'OK' : 'MISMATCH'}`,
+				`changed=[${changed.join(', ') || 'none'}] -> Wipe${pending.n}=${actual} ${ok ? 'OK' : 'MISMATCH'}`,
 		)
 	}
 
-	/** 推杆下发方式 -> 报文内容描述（便于对照日志） */
+	/** T-Bar send mode -> packet description (useful when reading the log) */
 	private tbarModeDesc(mode: TBarSendMode, raw: number, percent: number): string {
 		switch (mode) {
 			case 'pos':
-				return `Key_type=2, Key_Pos=${percent}%/valid=0x05（Mode=pos）`
+				return `Key_type=2, Key_Pos=${percent}%/valid=0x05 (Mode=pos)`
 			case 'both':
-				return `Key_type=2, Key_Val=${raw}+Key_Pos=${raw <= 0 ? 0 : raw >= 4095 ? 2 : 1}(档位)/valid=0x07（Mode=both）`
+				return `Key_type=2, Key_Val=${raw}+Key_Pos=${raw <= 0 ? 0 : raw >= 4095 ? 2 : 1}(gear)/valid=0x07 (Mode=both)`
 			case 'valPct':
-				return `Key_type=2, Key_Val=${percent}(百分比)/valid=0x03（Mode=valPct）`
+				return `Key_type=2, Key_Val=${percent}(percent)/valid=0x03 (Mode=valPct)`
 			default:
-				return `Key_type=2, Key_Val=${raw}/valid=0x03（Mode=val）`
+				return `Key_type=2, Key_Val=${raw}/valid=0x03 (Mode=val)`
 		}
 	}
 
-	/** 回读值是否与目标值一致（设备推杆有平滑/限速，容差取 10%，但“未动”仍判失败） */
+	/** Whether a read-back matches the target (the device smooths/limits movement, so allow 10%, but "not moved" still fails) */
 	private tbarMatches(device: number, target: number): boolean {
 		if (device < 0) return false
 		const tBarMax = this.protocolFamily.tBarMax ?? 4095
 		const tolerance = Math.max(Math.round(tBarMax * 0.1), 16)
-		// 目标非 0 时，设备仍报 0 说明根本没接受（不能因落入 ±10% 容差就判成功）
+		// With a non-zero target, a device value of 0 means it did not accept the value (must not pass via the +/-10% tolerance)
 		if (target > 0 && device === 0) return false
 		return Math.abs(device - target) <= tolerance
 	}
 
 	/**
-	 * 推杆回读校验（严格按文档 3.1.3）：
-	 * Param_Vaild 4 字节：Bit0=Key_type、Bit1=Key_val（Bit2 及以上保留）；
-	 * 推杆时 Key_type=2，推杆数据填在 Key_val。
-	 * 下发后主动查询 0x0110，用设备上报值（而非本地乐观值）判定是否真的生效；
-	 * 未生效不改用其他编码，只把显示恢复为设备真值，避免 UI 与设备不一致。
+	 * T-Bar read-back verification (per doc 3.1.3):
+	 * Param_Vaild (4 bytes): Bit0=Key_type, Bit1=Key_val (Bit2+ reserved); for T-Bar Key_type=2 and the data goes in Key_val.
+	 * After sending, query 0x0110 and use the reported value (not the local optimistic one) to decide whether it took effect.
+	 * If it did not, no other encoding is tried: the display is restored to the device truth so the UI never disagrees.
 	 */
 	private async verifyTBarApplied(target: number, mode: TBarSendMode, seq: number): Promise<void> {
 		const tBarMax = this.protocolFamily.tBarMax ?? 4095
-		// 连续点击时只校验最后一次（新的操作会开启新序号）
+		// On rapid clicks only the last one is verified (a new action starts a new sequence)
 		if (seq !== this.tbarSendSeq) return
 
 		const got = await this.waitFreshStateReport()
@@ -1391,22 +1468,23 @@ export class ModuleInstance extends InstanceBase<ModuleConfig> {
 		}
 		this.log(
 			'warn',
-			`[T-Bar] 未生效: 下发 ${target}, 设备回读 ${deviceRaw} (mode=${mode}); ` +
-				`若持续为 0，说明设备不接受该值（或推杆数据量程/单位与 0~${tBarMax} 不符），已恢复显示为设备真值`,
+			`[T-Bar] Not applied: sent ${target}, device read-back ${deviceRaw} (mode=${mode}); ` +
+				`if it stays 0 the device does not accept the value (or the T-Bar range/unit does not match 0~${tBarMax}); the display was restored to the device value`,
 		)
 		this.tbarRaw = Math.max(deviceRaw, 0)
-		this.tbarHoldUntil = 0 // 释放本地基准锁定，让回读重新接管
+		this.tbarHoldUntil = 0 // Release the local base lock so read-backs take over again
 		const disp = tBarMax > 0 ? Math.round((this.tbarRaw * 500) / tBarMax) : 0
 		this.deviceState.tbarValue = disp
 		this.setVariableValues({ tbar_value: String(disp) })
 	}
 
-	/** 主动查询 0x0110 并等待一条“新”的回包（最多约 1s），返回是否收到 */
+	/** Query 0x0110 and wait for a "new" reply (about 1 s max); returns whether one arrived */
 	private async waitFreshStateReport(): Promise<boolean> {
 		const before = this.lastReplyAt.get('state') ?? 0
 		await this.queryStateOnce()
 		for (let i = 0; i < 20; i++) {
 			await new Promise((resolve) => setTimeout(resolve, 50))
+			if (!this.instanceAlive) return false
 			if ((this.lastReplyAt.get('state') ?? 0) > before) return true
 		}
 		return false

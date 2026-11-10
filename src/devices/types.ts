@@ -1,14 +1,14 @@
 import type { ParamValidMode, ProtocolCommand } from '../features.js'
 
-/** 协议族：同一族内通信方式一致（报文结构 / 命令码 / 字段顺序 / 按键表） */
+/** Protocol family: one wire format per family (packet layout / command codes / field order / key map) */
 export type ProtocolFamilyId = 'avm-0605' | 'avm-0617' | 'avm-h4k'
 
-/** 按键报文 Data 结构版本 */
+/** Key-press (0x0010) data layout version */
 export type KeyPressFormat =
-	| 'index' // 0617：Param_Vaild=参数索引（0=Key_val / 1=T_Bar_val / 2=b_bar_pos）+ 2 字节值
-	| 'keytype' // H4K：Param_Vaild 位域（Bit0=Key_type / Bit1=Key_val）+ Key_type(1) + Key_val(2)
+	| 'index' // 0617: Param_Vaild = parameter index (0=Key_val / 1=T_Bar_val / 2=b_bar_pos) + 2-byte value
+	| 'keytype' // H4K: Param_Vaild bitmask (Bit0=Key_type / Bit1=Key_val) + Key_type(1) + Key_val(2)
 
-/** 产品按键值表（同一协议族内固定；不同产品若不同可各自覆盖） */
+/** Key value table of a product (fixed inside a family; products may override it) */
 export interface KeyMap {
 	pgm: number[]
 	pvw: number[]
@@ -20,14 +20,14 @@ export interface KeyMap {
 	mute: number
 	speed1: number
 	speed2: number
-	/** Stream 1~3 按键（无该能力的协议为空数组） */
+	/** Stream 1~3 keys (empty when the family has no streaming) */
 	stream: number[]
 	wipe: number[]
 	mix: number
 	dip: number
 	flipFlop: number
 	freeze: number
-	/** 以下为 H4K 特有独立按键，0617 不支持时置 0 */
+	/** H4K-only keys; 0 when the family does not support them */
 	chroma: number
 	chromaOnAir: number
 	luma: number
@@ -42,12 +42,12 @@ export interface KeyMap {
 }
 
 /**
- * 0x0110 状态上报的字节布局（各协议不同）。
- * - 0617：10 字节，[6..7]=T_Bar_val，[8..9]=b_bar_pos
- * - H4K ：9 字节，[6]=T_Bar_Pos，[7..8]=T_Bar_Val
+ * Byte layout of the 0x0110 state report (differs per protocol).
+ * - 0617: 10 bytes, [6..7]=T_Bar_val, [8..9]=b_bar_pos
+ * - H4K : 9 bytes, [6]=T_Bar_Pos, [7..8]=T_Bar_Val
  */
 export interface StateReportSpec {
-	/** 最小有效长度 */
+	/** Minimum valid length */
 	size: number
 	pgm: number
 	pvw: number
@@ -55,11 +55,11 @@ export interface StateReportSpec {
 	speedMode: number
 	ftb: number
 	freeze: number
-	/** T-Bar 位置（H4K 有；0617 无） */
+	/** T-Bar position (present on H4K, absent on 0617) */
 	tBarPos?: { offset: number; size: number }
-	/** T-Bar 值 */
+	/** T-Bar value */
 	tBarValue: { offset: number; size: number }
-	/** 0617 的 b_bar_pos */
+	/** 0617 b_bar_pos */
 	bBarPos?: { offset: number; size: number }
 }
 
@@ -67,96 +67,97 @@ export interface ProtocolFamily {
 	id: ProtocolFamilyId
 	displayName: string
 	commands: Record<string, ProtocolCommand>
-	/** 设置指令 Param_Vaild 编码方式 */
+	/** Param_Vaild encoding used by set commands */
 	paramValidMode: ParamValidMode
-	/** 按键（0x0010）报文结构版本 */
+	/** Key-press (0x0010) packet layout version */
 	keyPressFormat: KeyPressFormat
-	/** 按键值表 */
+	/** Key value table */
 	keyMap: KeyMap
-	/** PGM/PVW 输入路数 */
+	/** Number of PGM/PVW inputs */
 	inputCount: number
-	/** PIP 路数 */
+	/** Number of PIP layers */
 	pipCount: number
-	/** WIPE 样式数量 */
+	/** Number of wipes */
 	wipeCount: number
-	/** Logo 可选数量 */
+	/** Number of logos */
 	logoCount: number
-	/** 是否有 Stream（依赖 Codec 0x00A0） */
+	/** Whether streaming is available (requires Codec 0x00A0) */
 	hasStream: boolean
-	/** 0x0110 状态上报的字节布局 */
+	/** Byte layout of the 0x0110 state report */
 	stateReport?: StateReportSpec
-	/** T-Bar 原始值上限（0617 / H4K 均为 0~4095） */
+	/** Max raw T-Bar value (0~4095 on both 0617 and H4K) */
 	tBarMax?: number
 	/**
-	 * 无心跳指令的协议族使用的探活指令（Data 为空）。
-	 * 例：H4K 无 0xEEEE 心跳，用 0x0001（读版本号）作为在线探测；
-	 * 0617 / 0605 不设此项，仍用 0xEEEE（有 MAC）/ 0xFFFF（无 MAC）。
+	 * Liveness probe command for families without a heartbeat (empty Data).
+	 * Example: H4K has no 0xEEEE heartbeat, so 0x0001 (read version) is used for probing;
+	 * 0617 / 0605 leave this unset and keep using 0xEEEE (with MAC) / 0xFFFF (without MAC).
 	 */
 	probeCommand?: number
 	/**
-	 * 是否保留 0617 的 0x0001/0x0002 = 电源开/关 语义。
-	 * H4K 中 0x0001=读版本号、0x0002=输入信息，必须置 false，否则响应会被误判。
+	 * Whether 0x0001/0x0002 keep the 0617 power on/off semantics.
+	 * On H4K, 0x0001 is read-version and 0x0002 is input info, so this must be false.
 	 */
 	legacyPowerCommands?: boolean
-	/** 键源下拉项（各协议的枚举起点不同） */
+	/** Key source dropdown items (enumeration start differs per protocol) */
 	keySources: Array<{ id: number; label: string }>
-	/** PIP 源下拉项 */
+	/** PIP source dropdown items */
 	pipSources: Array<{ id: number; label: string }>
-	/** WIPE 样式下拉项（0617=0~10；H4K=0~27，下发值 = 下拉 id，0 = 第一张图） */
+	/** Wipe style dropdown items (0617=0~10; H4K=0~27, sent value = dropdown id, 0 = first pattern) */
 	wipeStyles: Array<{ id: number; label: string }>
 	/**
-	 * WIPE 样式下发偏移：发送值 = 下拉 id - wipeStyleOffset。
-	 * 当前各协议族均为 0（下拉 id 即下发值）；保留字段供未来设备样式枚举起点不同时使用。
+	 * Wipe style send offset: sent value = dropdown id - wipeStyleOffset.
+	 * All families currently use 0 (the dropdown id is the sent value); kept for future devices
+	 * whose style enumeration starts at a different value.
 	 */
 	wipeStyleOffset?: number
 	/**
-	 * 推杆下发方式（仅 keyPressFormat='keytype' 的族生效）：
-	 * - 'val'：valid=0x03，Key_Val 0~4095（H4K 文档：Key_type=2 时 Key_Val 为推杆数据）
-	 * - 'pos'：valid=0x05，Key_Pos 0~100%
-	 * - 'both'：valid=0x07，Key_Val 0~4095 + Key_Pos 档位 0/1/2（上位机实测报文）
-	 * - 'valPct'：valid=0x03，Key_Val 用百分比 0~100
+	 * T-Bar send mode (only used when keyPressFormat='keytype'):
+	 * - 'val': valid=0x03, Key_Val 0~4095 (H4K doc: Key_Val carries T-Bar data when Key_type=2)
+	 * - 'pos': valid=0x05, Key_Pos 0~100%
+	 * - 'both': valid=0x07, Key_Val 0~4095 + Key_Pos gear 0/1/2 (measured from the host app)
+	 * - 'valPct': valid=0x03, Key_Val as a 0~100 percentage
 	 */
 	tBarSendMode?: 'pos' | 'val' | 'both' | 'valPct'
 	/**
-	 * 是否隐藏 “All AFV” 动作（H4K 无此功能）。
-	 * 仅影响 UI 注册；audio 协议字段 AllAfv 仍保留在固定布局中（不能删，否则 34B/29B 会错位）。
+	 * Hide the "All AFV" action (H4K has no such feature).
+	 * UI registration only; the AllAfv protocol field stays in the fixed layout (removing it would shift 34B/29B).
 	 */
 	hideAllAfvAction?: boolean
 	/**
-	 * 是否隐藏 “Audio Reset” 动作及预设（H4K 不提供音频整体复位）。
-	 * 仅影响 UI 注册；audio 协议字段 Reset 仍保留在固定布局中（不能删，否则后续 31 个字段全部错位）。
+	 * Hide the "Audio Reset" action and preset (H4K has no global audio reset).
+	 * UI registration only; the Reset field stays in the fixed layout (removing it would shift all later fields).
 	 */
 	hideAudioResetAction?: boolean
 	/**
-	 * 是否额外提供“WIPE 通道 + 样式”合并动作（trans_wipe_style）。
-	 * 仅 H4K 开启；0617/0605 保持原有的 trans_wipe1~4 动作列表不变。
+	 * Offer the combined "wipe channel + style" action (trans_wipe_style).
+	 * Enabled on H4K only; 0617/0605 keep their existing trans_wipe1~4 actions unchanged.
 	 */
 	mergeWipeStyleAction?: boolean
 	/**
-	 * 连接后是否自动查询所有带获取码的指令（H4K 打开）。
-	 * 关闭时仅使用 stateQueryKeys（或完全不查询）。
+	 * Query every command that has a get code right after connecting (enabled on H4K).
+	 * When off, only stateQueryKeys are queried (or nothing at all).
 	 */
 	queryAllOnConnect?: boolean
 	/**
-	 * 连接后需要主动查询的命令键：
-	 * 对无全量状态上报（如 0617 的 0x0110）的协议族，通过 0x00xx + Param_Vaild=0 主动获取。
+	 * Command keys queried right after connecting:
+	 * families without a full state report (e.g. 0617 0x0110) are polled with 0x00xx + Param_Vaild=0.
 	 */
 	stateQueryKeys?: string[]
 	/**
-	 * 是否处理设备的查询应答（Pack_Type=1）。
-	 * 打开后 onData 回调传入的 payload 直接作为状态数据解析（H4K）。
-	 * 关闭（默认）时保持旧行为：只处理主动上报（Pack_Type=2），不影响 0617/0605。
+	 * Whether to handle device query replies (Pack_Type=1).
+	 * When on, the payload passed to onData is parsed as state data directly (H4K).
+	 * When off (default), only active reports (Pack_Type=2) are handled, so 0617/0605 are unaffected.
 	 */
 	parseQueryReplies?: boolean
 }
 
 /**
- * 产品功能分组键。
- * action / feedback / preset 通过 id 前缀自动归入某一分组（见 index.ts 的 FEATURE_ID_RULES），
- * 产品档案只需声明自己支持哪些分组。
+ * Product feature group keys.
+ * action / feedback / preset ids are assigned to a group by prefix (see FEATURE_ID_RULES in index.ts);
+ * a product profile only declares which groups it supports.
  */
 export type DeviceFeatureKey =
-	| 'source' // PGM/PVW 源切换
+	| 'source' // PGM/PVW source switching
 	| 'transition' // CUT/AUTO/FTB/WIPE/MIX/DIP/FREEZE/T-Bar
 	| 'stream' // Stream 1~3
 	| 'pip'
@@ -165,27 +166,27 @@ export type DeviceFeatureKey =
 	| 'dsk'
 	| 'logo'
 	| 'audio'
-	| 'system' // 连接、扫描等通用功能，始终启用
+	| 'system' // Connection, scanning and other common features; always enabled
 
 export interface DeviceProfile {
-	/** 产品档案内部标识（如 shark-s6-plus） */
+	/** Internal profile id (e.g. shark-s6-plus) */
 	id: string
-	/** 界面显示名称（如 SHARK S6 PLUS） */
+	/** Display name (e.g. SHARK S6 PLUS) */
 	displayName: string
-	/** 扫描回包 model 字段的前缀；顺序无关，匹配时按最长前缀优先 */
+	/** Prefixes of the discovery model field; order does not matter, longest prefix wins */
 	modelPrefixes: string[]
-	/** 心跳报文使用的 Dev_Type（与上位机 get_udp_model_index 一致） */
+	/** Dev_Type used in heartbeat packets (matches the host app get_udp_model_index) */
 	udpDevType: number
 	/**
-	 * 广播发现回包里的设备类型标识（productType，字节偏移 22）。
-	 * 声明后优先按类型识别（比 model 字符串可靠，model 只有 10 字节）。
-	 * 例：H4K PLUS=0x06/0x07，H4K=0x08。
+	 * Device type id from the discovery reply (productType, byte offset 22).
+	 * When declared, it is matched before the model string (more reliable; model is only 10 bytes).
+	 * Example: H4K PLUS = 0x06/0x07, H4K = 0x08.
 	 */
 	productTypes?: number[]
-	/** 该产品使用的协议族（决定通信命令表） */
+	/** Protocol family used by this product (decides the command table) */
 	protocolFamily: ProtocolFamilyId
-	/** 该产品启用的功能分组 */
+	/** Feature groups enabled on this product */
 	features: DeviceFeatureKey[]
-	/** 产品私有/覆盖的协议命令（在协议族命令表之上合并，键相同则覆盖） */
+	/** Product-specific command overrides (merged over the family table; same key wins) */
 	protocolOverrides?: Record<string, ProtocolCommand>
 }

@@ -1,16 +1,16 @@
 /**
- * AVM 协议功能注册表（数据驱动）
+ * AVM protocol feature registry (data driven).
  *
- * 依据《AVM UDP通信协议 V1.0.0(PSV0617)》：
- * - 每条指令的 Data 由「Param_Vaild(4字节) + 各字段值」组成（设置用）
- * - 获取指令的 Data 为「各字段值顺序拼接」（无 Param_Vaild）
- * - 字段按附件文档的 NO.x 顺序排列，字段字节偏移 = 前面字段大小之和
+ * Based on "AVM UDP Communication Protocol V1.0.0 (PSV0617)":
+ * - A set command's Data is Param_Vaild (4 bytes) + each field value
+ * - A get command's Data is the field values concatenated (no Param_Vaild)
+ * - Fields are listed in the NO.x order of the protocol doc; a field's byte offset is the sum of the preceding sizes
  *
- * 本文件只登记「简单开关(0/1)」类字段，用于自动生成 action / feedback / preset。
- * 需要文本输入、IP、时间、复杂枚举的字段一律不做。
+ * Only simple on/off (0/1) fields are registered here, to auto-generate actions / feedbacks / presets.
+ * Fields needing text input, IP, time or complex enums are intentionally omitted.
  *
- * 注意：Param_Vaild 为 4 字节位掩码，只能寻址 NO.0~31；
- * 因此 NO.>=32 的字段（如 Audio MIC_EN=33、System IP_DHCP=33）暂不支持。
+ * Note: Param_Vaild is a 4-byte bitmask addressing NO.0~31 only, so fields with NO.>=32
+ * (e.g. Audio MIC_EN=33, System IP_DHCP=33) are not supported yet.
  */
 
 export interface ProtocolField {
@@ -19,22 +19,22 @@ export interface ProtocolField {
 }
 
 export interface ProtocolCommand {
-	/** 设置指令 */
+	/** Set command */
 	set: number
-	/** 查询/上报指令 */
+	/** Query / report command */
 	get: number
-	/** 设置指令字段列表（顺序即 valid 位下标） */
+	/** Set-command field list (order = valid bit index) */
 	fields: ProtocolField[]
 	/**
-	 * 查询/上报回包的字段布局。
-	 * 缺省与 fields 相同；H4K 的 GET 与 SET 不一致（如 luma GET 16B / SET 21B，
-	 * audio GET 29B 无 Reset_All / SET 34B），必须单独声明。
+	 * Field layout of query/report replies.
+	 * Defaults to `fields`; H4K differs between GET and SET (e.g. luma GET 16B / SET 21B,
+	 * audio GET 29B without Reset_All / SET 34B), so it must be declared explicitly.
 	 */
 	getFields?: ProtocolField[]
 }
 
 export const PROTOCOL_COMMANDS: Record<string, ProtocolCommand> = {
-	// Transition 设置 0x0020 / 获取 0x0120
+	// Transition set 0x0020 / get 0x0120
 	transition: {
 		set: 0x0020,
 		get: 0x0120,
@@ -53,7 +53,7 @@ export const PROTOCOL_COMMANDS: Record<string, ProtocolCommand> = {
 			{ name: 'TBarStatus', size: 1 },
 		],
 	},
-	// LUMA 设置 0x0031 / 获取 0x0131
+	// LUMA set 0x0031 / get 0x0131
 	luma: {
 		set: 0x0031,
 		get: 0x0131,
@@ -76,7 +76,7 @@ export const PROTOCOL_COMMANDS: Record<string, ProtocolCommand> = {
 			{ name: 'Reset', size: 1 },
 		],
 	},
-	// CHROMA 设置 0x0032 / 获取 0x0132
+	// CHROMA set 0x0032 / get 0x0132
 	chroma: {
 		set: 0x0032,
 		get: 0x0132,
@@ -105,7 +105,7 @@ export const PROTOCOL_COMMANDS: Record<string, ProtocolCommand> = {
 			{ name: 'Reset', size: 1 },
 		],
 	},
-	// PIP Border 设置 0x0036 / 获取 0x0136
+	// PIP Border set 0x0036 / get 0x0136
 	pipBorder: {
 		set: 0x0036,
 		get: 0x0136,
@@ -115,7 +115,7 @@ export const PROTOCOL_COMMANDS: Record<string, ProtocolCommand> = {
 			{ name: 'Width', size: 1 },
 		],
 	},
-	// PIP1 设置 0x0033 / 获取 0x0133
+	// PIP1 set 0x0033 / get 0x0133
 	pip1: {
 		set: 0x0033,
 		get: 0x0133,
@@ -128,7 +128,7 @@ export const PROTOCOL_COMMANDS: Record<string, ProtocolCommand> = {
 			{ name: 'Reset', size: 1 },
 		],
 	},
-	// PIP2 设置 0x0034 / 获取 0x0134
+	// PIP2 set 0x0034 / get 0x0134
 	pip2: {
 		set: 0x0034,
 		get: 0x0134,
@@ -141,7 +141,7 @@ export const PROTOCOL_COMMANDS: Record<string, ProtocolCommand> = {
 			{ name: 'Reset', size: 1 },
 		],
 	},
-	// PIP3 设置 0x0035 / 获取 0x0135
+	// PIP3 set 0x0035 / get 0x0135
 	pip3: {
 		set: 0x0035,
 		get: 0x0135,
@@ -154,7 +154,7 @@ export const PROTOCOL_COMMANDS: Record<string, ProtocolCommand> = {
 			{ name: 'Reset', size: 1 },
 		],
 	},
-	// DSK 设置 0x0040 / 获取 0x0140
+	// DSK set 0x0040 / get 0x0140
 	dsk: {
 		set: 0x0040,
 		get: 0x0140,
@@ -174,7 +174,7 @@ export const PROTOCOL_COMMANDS: Record<string, ProtocolCommand> = {
 			{ name: 'Reset', size: 1 },
 		],
 	},
-	// LOGO 设置 0x0041 / 获取 0x0141
+	// LOGO set 0x0041 / get 0x0141
 	logo: {
 		set: 0x0041,
 		get: 0x0141,
@@ -188,7 +188,7 @@ export const PROTOCOL_COMMANDS: Record<string, ProtocolCommand> = {
 			{ name: 'Reset', size: 1 }, // 6
 		],
 	},
-	// Audio 设置 0x0050 / 获取 0x0150
+	// Audio set 0x0050 / get 0x0150
 	audio: {
 		set: 0x0050,
 		get: 0x0150,
@@ -244,7 +244,7 @@ export const PROTOCOL_COMMANDS: Record<string, ProtocolCommand> = {
 			{ name: 'LineInDelay', size: 1 },
 		],
 	},
-	// Output 设置 0x0090 / 获取 0x0190
+	// Output set 0x0090 / get 0x0190
 	output: {
 		set: 0x0090,
 		get: 0x0190,
@@ -267,7 +267,7 @@ export const PROTOCOL_COMMANDS: Record<string, ProtocolCommand> = {
 			{ name: 'FtbWithMute', size: 1 },
 		],
 	},
-	// Codec 设置 0x00A0 / 获取 0x01A0
+	// Codec set 0x00A0 / get 0x01A0
 	codec: {
 		set: 0x00a0,
 		get: 0x01a0,
@@ -293,19 +293,19 @@ export const PROTOCOL_COMMANDS: Record<string, ProtocolCommand> = {
 }
 
 /**
- * H4K 协议族（SHARK H4K / SHARK H4K PLUS，Dev_Type 0x06 / 0x07 / 0x08）命令表
+ * H4K protocol family command table (SHARK H4K / SHARK H4K PLUS, Dev_Type 0x06 / 0x07 / 0x08).
  *
- * 依据《AVM H4K UDP 通信协议 结构化规范 V1.0.1》。
- * 注意：VS0405E / VS0405EH（SHARK S5 / H5）不使用本表，它们与 VS0617 同属 avm-0617。
+ * Based on "AVM H4K UDP Communication Protocol Structured Specification V1.0.1".
+ * Note: VS0405E / VS0405EH (SHARK S5 / H5) do NOT use this table; they belong to avm-0617 like VS0617.
  *
- * - 帧结构与 0617 相同（A55A / 29+n / A66A + 16bit 累加和）
- * - 差异：设置指令的 Param_Vaild 是「位域」（Bit0=第 1 个字段…），
- *   而 0617 是「字段索引」；字段命名统一沿用 0617 的写法，便于 action 复用。
- * - 无 Codec(0x00A0) / Output(0x0090) 指令，故不含 stream 功能。
+ * - Same frame structure as 0617 (A55A / 29+n / A66A + 16-bit checksum)
+ * - Difference: Param_Vaild of set commands is a bitmask (Bit0 = first field), while 0617 uses a field index;
+ *   field names follow the 0617 naming so actions can be reused.
+ * - No Codec (0x00A0) / Output (0x0090) commands, so there is no streaming feature.
  */
 export const H4K_PROTOCOL_COMMANDS: Record<string, ProtocolCommand> = {
-	// 状态上报/查询 0x0110（PGM/PVW/WIPE/SPEED/FTB/Freeze/T-Bar）
-	// 字节布局按 main.ts 的 ProtocolFamily.stateReport 解析，字段表仅用于发出查询与长度校验
+	// State report/query 0x0110 (PGM/PVW/WIPE/SPEED/FTB/Freeze/T-Bar)
+	// The byte layout is parsed by ProtocolFamily.stateReport in main.ts; this field table is only used for queries and length checks
 	state: {
 		set: 0x0110,
 		get: 0x0110,
@@ -321,7 +321,7 @@ export const H4K_PROTOCOL_COMMANDS: Record<string, ProtocolCommand> = {
 			{ name: 'TBarVal', size: 2 },
 		],
 	},
-	// Transition 设置 0x0020 / 同步 0x0120
+	// Transition set 0x0020 / sync 0x0120
 	transition: {
 		set: 0x0020,
 		get: 0x0120,
@@ -337,7 +337,7 @@ export const H4K_PROTOCOL_COMMANDS: Record<string, ProtocolCommand> = {
 			{ name: 'TBarStatus', size: 1 },
 		],
 	},
-	// Luma Key 设置 0x0031 / 查询 0x0131（SET 21B 含 Reset；GET 16B 无 Reset）
+	// Luma Key set 0x0031 / query 0x0131 (SET 21B with Reset; GET 16B without Reset)
 	luma: {
 		set: 0x0031,
 		get: 0x0131,
@@ -379,8 +379,8 @@ export const H4K_PROTOCOL_COMMANDS: Record<string, ProtocolCommand> = {
 			{ name: 'MaskBottom', size: 1 },
 		],
 	},
-	// Chroma Key 设置 0x0032 / 查询 0x0132（SET 37B 含 Reset；GET 32B 无 Reset）
-	// 注意：bit10/bit11 在 0617 叫 Similarity/Smooth，H4K 文档叫 Tolerance/Softness（位置相同）
+	// Chroma Key set 0x0032 / query 0x0132 (SET 37B with Reset; GET 32B without Reset)
+	// Note: bit10/bit11 are Similarity/Smooth on 0617 and Tolerance/Softness in the H4K doc (same positions)
 	chroma: {
 		set: 0x0032,
 		get: 0x0132,
@@ -446,8 +446,8 @@ export const H4K_PROTOCOL_COMMANDS: Record<string, ProtocolCommand> = {
 			{ name: 'MaskBottom', size: 1 },
 		],
 	},
-	// PIP 设置 0x0033 / 查询 0x0133（SET 13B 含 Reset；GET 8B 无 Reset）
-	// H4K 仅 1 路，沿用 pip1 作为命令键以复用现有 action/feedback
+	// PIP set 0x0033 / query 0x0133 (SET 13B with Reset; GET 8B without Reset)
+	// H4K has a single PIP layer; the pip1 command key is reused so existing actions/feedbacks work
 	pip1: {
 		set: 0x0033,
 		get: 0x0133,
@@ -473,8 +473,8 @@ export const H4K_PROTOCOL_COMMANDS: Record<string, ProtocolCommand> = {
 			{ name: 'BorderWidth', size: 1 },
 		],
 	},
-	// DSK 设置 0x0034 / 查询 0x0134（布局同 LUMA；SET 21B / GET 16B）
-	// 注意：0617 的 DSK 是 0x0040
+	// DSK set 0x0034 / query 0x0134 (same layout as LUMA; SET 21B / GET 16B)
+	// Note: DSK is 0x0040 on 0617
 	dsk: {
 		set: 0x0034,
 		get: 0x0134,
@@ -516,8 +516,8 @@ export const H4K_PROTOCOL_COMMANDS: Record<string, ProtocolCommand> = {
 			{ name: 'MaskBottom', size: 1 },
 		],
 	},
-	// Logo 设置 0x0040 / 查询 0x0140（GET 5B：Status/Select/PosX/PosY/Logo_valid_pos）
-	// 注意：0617 的 Logo 是 0x0041
+	// Logo set 0x0040 / query 0x0140 (GET 5B: Status/Select/PosX/PosY/Logo_valid_pos)
+	// Note: Logo is 0x0041 on 0617
 	logo: {
 		set: 0x0040,
 		get: 0x0140,
@@ -536,8 +536,8 @@ export const H4K_PROTOCOL_COMMANDS: Record<string, ProtocolCommand> = {
 			{ name: 'ValidPos', size: 1 },
 		],
 	},
-	// Audio 设置 0x0050 / 查询 0x0150（SET 34B 含 Reset_All；GET 29B 无 Reset_All）
-	// 4 路输入 + 2 路 MIC，无 XLR / LineIn / Guitar / PreGain
+	// Audio set 0x0050 / query 0x0150 (SET 34B with Reset_All; GET 29B without Reset_All)
+	// 4 inputs + 2 MIC, no XLR / LineIn / Guitar / PreGain
 	audio: {
 		set: 0x0050,
 		get: 0x0150,
@@ -605,9 +605,9 @@ export const H4K_PROTOCOL_COMMANDS: Record<string, ProtocolCommand> = {
 			{ name: 'Mic2Volume', size: 1 },
 		],
 	},
-	// Key Type：当前激活的 Key 模块（0=PIP / 1=Luma / 2=Chroma / 3=DSK）—— 只读
-	// 只用 GET 0x0130（1B）；切层直接按 PIP/LUMA/CHROMA/DSK 的 Key / ON AIR 按键（0x0010），
-	// 不通过 0x0030 写入（fields 置空，避免生成多余的设置动作）
+	// Key Type: currently active key module (0=PIP / 1=Luma / 2=Chroma / 3=DSK) - read only
+	// Only GET 0x0130 (1B) is used; layer switching presses the PIP/LUMA/CHROMA/DSK KEY / ON AIR keys (0x0010)
+	// instead of writing 0x0030 (fields left empty to avoid generating set actions)
 	keyType: {
 		set: 0x0030,
 		get: 0x0130,
@@ -638,17 +638,17 @@ function writeFieldValue(buf: Buffer, offset: number, size: number, value: numbe
 }
 
 /**
- * 设置指令的 Param_Vaild 编码方式
- * - index  ：写字段索引（0617 / PSV0617）
- * - bitmask：写位域 1<<索引（H4K / 0405 系列）
+ * Param_Vaild encoding used by set commands.
+ * - index  : write the field index (0617 / PSV0617)
+ * - bitmask: write 1<<index (H4K / 0405 family)
  */
 export type ParamValidMode = 'index' | 'bitmask'
 
 /**
- * 构建设置指令 Data：
- * - index 模式（0617）：Param_Vaild(4) = 字段索引 + 该字段值
- * - bitmask 模式（H4K）：Param_Vaild(4) = 1<<索引，且 Data 按【固定字段布局】输出
- *   全部字段值（未设置的填 0），否则设备会把值错位读到第一个字段。
+ * Build the Data of a set command:
+ * - index mode (0617): Param_Vaild(4) = field index + that field's value
+ * - bitmask mode (H4K): Param_Vaild(4) = 1<<index, and Data is sent in the fixed field layout
+ *   with every field value (0 for untouched fields), otherwise the device reads the value at the wrong offset.
  */
 export function buildSetData(
 	cmd: ProtocolCommand,

@@ -11,7 +11,7 @@ export function UpdateVariableDefinitions(self: ModuleInstance): void {
 		{ variableId: 'pvw_value', name: 'PVW reported value (1-8)' },
 		{ variableId: 'wipe_mode', name: 'WIPE mode (1-6)' },
 		{ variableId: 'wipe_label', name: 'WIPE mode (label)' },
-		// 各 Wipe 通道的样式（0x0120 回读；H4K 3 组，0617 4 组）
+		// Per-wipe style values (read back from 0x0120; 3 wipes on H4K, 4 on 0617)
 		{ variableId: 'wipe1_style', name: 'WIPE1 style value' },
 		{ variableId: 'wipe1_style_label', name: 'WIPE1 style (label)' },
 		{ variableId: 'wipe2_style', name: 'WIPE2 style value' },
@@ -24,7 +24,7 @@ export function UpdateVariableDefinitions(self: ModuleInstance): void {
 		{ variableId: 'ftb_state', name: 'FTB state (OFF/ON)' },
 		{ variableId: 'freeze_state', name: 'Freeze state (OFF/ON)' },
 		{ variableId: 'tbar_value', name: 'T-Bar current value (0-500)' },
-		// 当前激活的 Key 模块（0x0130，仅 H4K）：0=PIP / 1=Luma / 2=Chroma / 3=DSK
+		// Active key module (0x0130, H4K only): 0=PIP / 1=Luma / 2=Chroma / 3=DSK
 		{ variableId: 'key_type', name: 'Active key module value (0-3, H4K)' },
 		{ variableId: 'key_type_label', name: 'Active key module (PIP/LUMA/CHROMA/DSK)' },
 		{ variableId: 'last_action', name: 'Last executed action key' },

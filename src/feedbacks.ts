@@ -4,8 +4,15 @@ import { filterByProfile } from './devices/index.js'
 
 export function UpdateFeedbacks(self: ModuleInstance): void {
 	const feedbacks: Record<string, CompanionBooleanFeedbackDefinition> = {}
+	// N3: option lists follow the active protocol (6 inputs / 4 wipes on 0617, 4 / 3 on H4K)
+	const family = self.getProtocolFamilyInfo()
+	const sourceChoices = (prefix: 'PGM' | 'PVW'): Array<{ id: number; label: string }> => [
+		...Array.from({ length: family.inputCount }, (_, i) => ({ id: i + 1, label: `${prefix}${i + 1}` })),
+		{ id: 0xf0, label: 'Pattern1' },
+		{ id: 0xf1, label: 'Pattern2' },
+	]
 
-	// 连接状态（未连接时激活 → 灰）
+	// Connection status (active while offline -> grey)
 	feedbacks['connection_status'] = {
 		name: 'Device Disconnected (Grey when offline)',
 		description: 'Active while the switcher is not responding (disconnected / connecting)',
@@ -20,7 +27,7 @@ export function UpdateFeedbacks(self: ModuleInstance): void {
 		},
 	}
 
-	// PGM 当前源 → 红色按钮
+	// Current PGM source -> red button
 	feedbacks['pgm_active'] = {
 		name: 'PGM Source Active (Red)',
 		type: 'boolean',
@@ -33,16 +40,7 @@ export function UpdateFeedbacks(self: ModuleInstance): void {
 				id: 'source',
 				type: 'dropdown',
 				label: 'Source',
-				choices: [
-					{ id: 1, label: 'PGM1' },
-					{ id: 2, label: 'PGM2' },
-					{ id: 3, label: 'PGM3' },
-					{ id: 4, label: 'PGM4' },
-					{ id: 5, label: 'PGM5' },
-					{ id: 6, label: 'PGM6' },
-					{ id: 0xf0, label: 'Pattern1' },
-					{ id: 0xf1, label: 'Pattern2' },
-				],
+				choices: sourceChoices('PGM'),
 				default: 1,
 			},
 		],
@@ -52,7 +50,7 @@ export function UpdateFeedbacks(self: ModuleInstance): void {
 		},
 	}
 
-	// PVW 当前源 → 绿色按钮
+	// Current PVW source -> green button
 	feedbacks['pvw_active'] = {
 		name: 'PVW Source Active (Green)',
 		type: 'boolean',
@@ -65,16 +63,7 @@ export function UpdateFeedbacks(self: ModuleInstance): void {
 				id: 'source',
 				type: 'dropdown',
 				label: 'Source',
-				choices: [
-					{ id: 1, label: 'PVW1' },
-					{ id: 2, label: 'PVW2' },
-					{ id: 3, label: 'PVW3' },
-					{ id: 4, label: 'PVW4' },
-					{ id: 5, label: 'PVW5' },
-					{ id: 6, label: 'PVW6' },
-					{ id: 0xf0, label: 'Pattern1' },
-					{ id: 0xf1, label: 'Pattern2' },
-				],
+				choices: sourceChoices('PVW'),
 				default: 1,
 			},
 		],
@@ -84,7 +73,7 @@ export function UpdateFeedbacks(self: ModuleInstance): void {
 		},
 	}
 
-	// AUTO / FTB / MUTE 激活态
+	// AUTO / FTB / MUTE active state
 	feedbacks['auto_active'] = {
 		name: 'Auto Active',
 		type: 'boolean',
@@ -113,7 +102,7 @@ export function UpdateFeedbacks(self: ModuleInstance): void {
 		},
 	}
 
-	// Freeze 激活（红底闪烁）
+	// Freeze active (red blinking)
 	feedbacks['freeze_active'] = {
 		name: 'Freeze Active (Red blink)',
 		type: 'boolean',
@@ -125,7 +114,7 @@ export function UpdateFeedbacks(self: ModuleInstance): void {
 		},
 	}
 
-	// WIPE 当前模式（绿）：1~4=WIPE1~4 / 5=MIX / 6=DIP
+	// Current WIPE mode (green): 1~4=WIPE1~4 / 5=MIX / 6=DIP
 	feedbacks['wipe_active'] = {
 		name: 'WIPE Mode Active (Green)',
 		type: 'boolean',
@@ -136,10 +125,7 @@ export function UpdateFeedbacks(self: ModuleInstance): void {
 				type: 'dropdown',
 				label: 'Wipe Mode',
 				choices: [
-					{ id: 1, label: 'WIPE1' },
-					{ id: 2, label: 'WIPE2' },
-					{ id: 3, label: 'WIPE3' },
-					{ id: 4, label: 'WIPE4' },
+					...Array.from({ length: family.wipeCount }, (_, i) => ({ id: i + 1, label: `WIPE${i + 1}` })),
 					{ id: 5, label: 'MIX' },
 					{ id: 6, label: 'DIP' },
 				],
@@ -151,8 +137,7 @@ export function UpdateFeedbacks(self: ModuleInstance): void {
 		},
 	}
 
-	// 各 Wipe 通道的样式（0x0120 回读）→ 绿：高亮“该 Wipe 当前就是这个样式”
-	const wipeFamily = self.getProtocolFamilyInfo()
+	// Per-wipe style (read back from 0x0120) -> green when the wipe currently uses that style
 	feedbacks['wipe_style_active'] = {
 		name: 'WIPE Style Active (Green)',
 		type: 'boolean',
@@ -162,15 +147,15 @@ export function UpdateFeedbacks(self: ModuleInstance): void {
 				id: 'wipe',
 				type: 'dropdown',
 				label: 'Wipe',
-				choices: Array.from({ length: wipeFamily.wipeCount }, (_, i) => ({ id: i + 1, label: `WIPE${i + 1}` })),
+				choices: Array.from({ length: family.wipeCount }, (_, i) => ({ id: i + 1, label: `WIPE${i + 1}` })),
 				default: 1,
 			},
 			{
 				id: 'style',
 				type: 'dropdown',
 				label: 'Style',
-				choices: wipeFamily.wipeStyles,
-				default: wipeFamily.wipeStyles[0]?.id ?? 0,
+				choices: family.wipeStyles,
+				default: family.wipeStyles[0]?.id ?? 0,
 			},
 		],
 		callback: (feedback) => {
@@ -180,7 +165,7 @@ export function UpdateFeedbacks(self: ModuleInstance): void {
 		},
 	}
 
-	// Stream 1~3 开关（Codec 0x01A0：STREAM_1/2/3_EN，字段 9/10/11）→ 黄底白字
+	// Stream 1~3 switches (Codec 0x01A0: STREAM_1/2/3_EN, fields 9/10/11) -> yellow on white
 	feedbacks['stream_active'] = {
 		name: 'Stream Active (Yellow)',
 		type: 'boolean',
@@ -204,12 +189,12 @@ export function UpdateFeedbacks(self: ModuleInstance): void {
 		},
 	}
 
-	// 状态反馈：PIP/LUMA/CHROMA/DSK/LOGO 的 STATUS（0:OFF/1:KEY/2:ON AIR/3:KEY&ON AIR）
-	// 默认绿底白字；预设里 ON AIR 按钮会覆盖为红底白字
-	// H4K：非 OFF 状态还要叠加“当前激活的 Key 层”（0x0130），否则 PIP/LUMA/CHROMA 都开着时
-	// 三个按钮会一起变绿——只有当前面板选中的那一层才点亮。
+	// Status feedback: PIP/LUMA/CHROMA/DSK/LOGO STATUS (0:OFF/1:KEY/2:ON AIR/3:KEY&ON AIR)
+	// Green by default; the ON AIR preset overrides it to red on white.
+	// H4K: a non-OFF state must also be the currently selected key layer (0x0130), otherwise
+	// PIP/LUMA/CHROMA would all light up together; only the layer selected on the panel lights.
 	const keyTypeOf: Record<string, number> = { pip1: 0, pip2: 0, pip3: 0, luma: 1, chroma: 2, dsk: 3 }
-	// 将内部 id 映射为可读名称，避免反馈列表中“pip1_status_active (Green/Red)”这种不友好的展示
+	// Map internal ids to readable names, avoiding entries like "pip1_status_active (Green/Red)"
 	const statusFbLabels: Record<string, string> = {
 		pip1: 'PIP1 Status',
 		pip2: 'PIP2 Status',
@@ -243,13 +228,13 @@ export function UpdateFeedbacks(self: ModuleInstance): void {
 				const want = Number((feedback.options as Record<string, unknown>).status)
 				const actual = self.getReportState(cmdKey)[self.getReportFieldIndex(cmdKey, fieldName)] ?? -1
 				if (actual !== want) return false
-				// OFF 只看 Status；非 OFF 在 H4K 上还必须是当前激活的 Key 层
+				// OFF only checks Status; a non-OFF state on H4K must also be the active key layer
 				if (want === 0) return true
 				if (!self.getProtocolCommands()['keyType']) return true
 				const expect = keyTypeOf[cmdKey]
 				if (expect === undefined) return true
 				const current = self.getDeviceState().keyType
-				// 还没收到 0x0130 回读时（-1）不过滤，保持旧行为
+				// Before the first 0x0130 reply (-1) do not filter, keeping the previous behaviour
 				if (typeof current !== 'number' || current < 0) return true
 				return current === expect
 			},
@@ -263,12 +248,12 @@ export function UpdateFeedbacks(self: ModuleInstance): void {
 	statusFb('dsk_status_active', 'dsk', 'Status')
 	statusFb('logo_status_active', 'logo', 'Status')
 
-	// 当前激活的 Key 模块（0x0130，仅 H4K）：PIP / Luma / Chroma / DSK 互斥高亮
-	// 面板上选中哪个 Key 层，对应按钮就亮——比各自的 Status 字段更直观
+	// Currently active key module (0x0130, H4K only): PIP / Luma / Chroma / DSK highlight exclusively.
+	// Whichever key layer is selected on the panel lights up - clearer than each Status field.
 	if (self.getProtocolCommands()['keyType']) {
 		feedbacks['key_type_active'] = {
 			name: 'Key Module Selected (PIP/Luma/Chroma/DSK)',
-			description: '当前激活的 Key 模块（0x0130 回读，仅 H4K）',
+			description: 'Active key module (read back from 0x0130, H4K only)',
 			type: 'boolean',
 			defaultStyle: { bgcolor: combineRgb(0, 153, 0), color: combineRgb(255, 255, 255) },
 			options: [
@@ -290,8 +275,8 @@ export function UpdateFeedbacks(self: ModuleInstance): void {
 		}
 	}
 
-	// 执行闪烁：最近执行的 action key 命中时短暂亮起（橙底黑字）
-	// key 约定：按键=key:<Key_val>（如 key:5）；协议设置=set:<cmdKey>:<field>（如 set:luma:1）；推杆=tbar
+	// Action flash: lights briefly when the last executed action key matches (orange on black)
+	// Key format: key=key:<Key_val> (e.g. key:5); protocol set=set:<cmdKey>:<field> (e.g. set:luma:1); T-Bar=tbar
 	feedbacks['last_action'] = {
 		name: 'Last Action (Flash)',
 		type: 'boolean',
@@ -305,12 +290,13 @@ export function UpdateFeedbacks(self: ModuleInstance): void {
 				useVariables: true,
 			},
 		],
-		callback: (feedback) => {
-			const key = String((feedback.options as unknown as Record<string, string>).key ?? '')
+		callback: async (feedback, context) => {
+			// N2: the option offers variables, so resolve them before comparing
+			const key = await context.parseVariablesInString(String(feedback.options.key ?? ''))
 			return key !== '' && self.getDeviceState().lastAction === key
 		},
 	}
 
-	// 按当前产品档案裁剪反馈定义
+	// Filter feedback definitions by the current product profile
 	self.setFeedbackDefinitions(filterByProfile(feedbacks, self.getDeviceProfile()))
 }

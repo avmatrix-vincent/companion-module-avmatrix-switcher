@@ -6,12 +6,26 @@ Control Avmatrix switchers from Companion over UDP.
 
 - SHARK S6 (VS0605)
 - SHARK S6 PLUS (VS0617)
+- SHARK S5 (VS0405E)
+- SHARK H5 (VS0405EH)
+- SHARK H4K
+- SHARK H4K PLUS
 - Other Avmatrix models using the same UDP protocol may work as well
+
+### Device differences
+
+The SHARK H4K and H4K PLUS use a reduced feature set:
+
+- 4 inputs and a single PIP layer (no PIP2 / PIP3)
+- 3 wipes (no WIPE4)
+- No streaming (Stream 1-3)
+- No XLR / Line In inputs, no All AFV and no global Audio Reset
 
 ### Configuration
 
 - **Device**: pick a switcher discovered automatically on the local network. Companion scans with UDP broadcast and lists every device that answers. If nothing is found the list shows `No supported device found`.
 - **Target IP**: IP address of the switcher. It is filled in from the selected device, but can also be entered manually, which is useful when the device is on another subnet and cannot be discovered.
+- **Manual Device Model**: off by default, so the model detected by the scan is always used. Turn it on to always use the model selected below, even when the device is found by the scan; this is needed when you type a Target IP for a device that cannot be discovered. Select the model that matches the hardware (for example SHARK H4K) so the correct protocol is used.
 
 Device control always uses **UDP port 7000**; it is not configurable.
 
